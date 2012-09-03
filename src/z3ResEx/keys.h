@@ -4,9 +4,6 @@
 
 	keys.h
 		Extracted keys from client executables
-
-	NOTES
-		To support a new game, add to the game_ids instance at the bottom
 */
 
 #ifndef _H_KEYS_

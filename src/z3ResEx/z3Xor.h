@@ -3,7 +3,7 @@
 	Written by x1nixmzeng
 
 	z3Xor.h
-		
+		From the original Z3Ex project
 */
 
 #ifndef _H_Z3XOR_
@@ -13,7 +13,7 @@ namespace z3Xor
 {
 	#include <windows.h>
 
-	void rs3Unscramble( char *srcBuffer, DWORD srcSize, DWORD xorkey )
+	void rs3Unscramble( unsigned char *srcBuffer, DWORD srcSize, DWORD xorkey )
 	{
 		// Unscramble the 32-bit blocks
 

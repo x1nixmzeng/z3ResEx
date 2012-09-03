@@ -53,10 +53,13 @@ bool z3Decrypt( unsigned char* key, TMemoryStream &src, TMemoryStream &dst )
 /*
 	z3Rle
 */
-bool fsRle( TMemoryStream &src, TMemoryStream &dst /*todo: expected size here?*/ )
+bool fsRle( TMemoryStream &src, TMemoryStream &dst, bool isFIndex = true /*todo: expected size here?*/ )
 {
 	unsigned int expectedSize, len;
-	unsigned char *pData( src.Data() +4 );
+	unsigned char *pData( src.Data() );
+
+	// quickfix
+	if( isFIndex ) pData += 4;
 
 	if( !( z3Rle::decodeSize( pData, expectedSize, len ) ) )
 	{
@@ -97,5 +100,56 @@ bool fsRle( TMemoryStream &src, TMemoryStream &dst /*todo: expected size here?*/
 */
 
 // todo
+
+
+/*
+	Misc
+*/
+bool fsReadMSF( TMemoryStream &msf )
+{
+	const std::string msfName( "fileindex.msf" );
+
+	TMemoryStream fileIndex, fileIndex_dec;
+
+	// Check we can open the file for reading
+	if( !( fileIndex.LoadFromFile( msfName.c_str() ) ) )
+	{
+		printf("ERROR: Unable to open file (%s)\n", msfName.c_str() );
+		return false;
+	}
+
+	// Double-check the filesize
+	if( !( fileIndex.Size() > 0 ) )
+	{
+		fileIndex.Close();
+		printf("ERROR: File is empty (%s)\n", msfName.c_str() );
+		return false;
+	}
+
+	// Attempt to decrypt the data
+	if( !( z3Decrypt( Z3_KEY_GUNZ2_NETMARBLE, fileIndex, fileIndex_dec ) ) )
+	{
+		fileIndex.Close();
+		printf("ERROR: Unable to decrypt fileindex (did you use the right key?)\n");
+		return false;
+	}
+
+	fileIndex.Close();
+	
+	// Attempt to uncompress the data
+	if( !( fsRle( fileIndex_dec, msf ) ) )
+	{
+		fileIndex_dec.Close();
+		return false;
+	}
+
+	// Success! File has been converted to plaintext!
+	printf("MSF has been extracted (%u bytes)!\n", msf.Size());
+	
+	fileIndex.Close();
+	fileIndex_dec.Close();
+
+	return true;
+}
 
 #endif

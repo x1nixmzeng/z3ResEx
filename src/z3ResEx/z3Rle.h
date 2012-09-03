@@ -4,7 +4,7 @@
 
 	z3Rle.h
 		Contains parts of the z3ResourceExtractor-wip project
-		Thanks to skyflox
+		Research work inspired by skyflox
 */
 
 #ifndef _H_Z3RLE_

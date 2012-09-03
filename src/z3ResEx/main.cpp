@@ -2,6 +2,8 @@
 	z3ResEx
 	Written by x1nixmzeng
 
+	main.cpp
+
 	Initial version
 */
 
@@ -9,6 +11,7 @@
 
 // Import TStream class
 #include "mbuffer.h"
+#include "fbuffer.h"
 
 // Import fileindex definitions and encryption keys
 #include "z3MSF.h"
@@ -17,81 +20,122 @@
 // Import methods
 #include "methods.h"
 
-bool readMSF( char *clientPath, TMemoryStream &msf )
+void fsCreatePath( std::string &strPath )
 {
-	std::string fname;
+	int pathLoc( strPath.find('/') );
 
-	fname = clientPath;
-	fname+= "fileindex.msf";
-
-	TMemoryStream fileIndex, fileIndex_dec;
-
-	if( !( fileIndex.LoadFromFile( fname.c_str() ) ) )
+	while( !( pathLoc == std::string::npos ) )
 	{
-		printf("ERROR: Unable to open file (%s)\n", fname.c_str() );
-		fname.clear();
+		CreateDirectoryA( strPath.substr( 0, pathLoc ).c_str(), nullptr );
+
+		pathLoc = strPath.find( '/', pathLoc+1 );
+	}
+}
+
+std::string fsRename( char *strMrf, char *strName )
+{
+	std::string name( "datadump/" );
+
+	// Append the MRF name
+	name += strMrf;
+	// Now remove the MRF extension (.mrf, .001, .002, etc)
+	name = name.substr( 0, name.rfind('.') );
+	// Append the filename
+	name += "/";
+	name += strName;
+
+	return name;
+}
+
+bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, char *strName )
+{
+	// Load MRF
+
+	TFileStream mrf( strMrf );
+
+	if( !( mrf.isOpen() ) )
+	{
+		printf("ERROR: Could not open file (%s)\n", strMrf );
 		return false;
 	}
 
-	if( fileIndex.Size() == 0 )
-	{
-		fileIndex.Close();
-		printf("ERROR: File is empty (%s)\n", fname.c_str() );
-		return false;
-	}
+	mrf.Seek( info.offset, bufo_start );
 
-	if( z3Decrypt( Z3_KEY_GUNZ2_NETMARBLE, fileIndex, fileIndex_dec ) )
+	unsigned char *buf( new unsigned char[ info.zsize ] );
+	mrf.Read( buf, info.zsize );
+	mrf.Close();
+
+	TMemoryStream fdata;
+	fdata.LoadFromBuffer( buf, info.zsize );
+
+	delete buf;
+
+	if( method == FILEINDEX_ENTRY_COMPRESSED )
 	{
-		fileIndex.Close();
-		
-		if( fsRle( fileIndex_dec, msf ) )
+		z3Xor::rs3Unscramble( fdata.Data(), fdata.Size(), info.xorkey );
+
+		TMemoryStream fdata_raw;
+		if( fsRle( fdata, fdata_raw, false ) )
 		{
-			fileIndex_dec.Close();
+			printf("Got file data!\n");
 
-			printf("MSF has been extracted (%u bytes)!\n", msf.Size());
+			// todo: save it
 		}
 
-		fileIndex_dec.Close();
+
+		fdata_raw.Close();
+		
 	}
-	
-	fileIndex.Close();
-	fileIndex_dec.Close();
+
+	fdata.Close();
 
 	return true;
 }
 
-
-
-void extractionMain( char *clientPath, int resolvedType )
+void extractionMain( int resolvedType )
 {
-	FILEINDEX_ENTRY info;
-	unsigned char method;
-	unsigned int items;
-
 	TMemoryStream msf;
 
-	if( readMSF( clientPath, msf ) )
+	// Check the fileindex can be located and decrypted
+	if( fsReadMSF( msf ) )
 	{
-		items = 0;
+		unsigned int items( 0 ), errors( 0 );
 
-		while( msf.Position() < msf.Size() )
+		FILEINDEX_ENTRY info;
+		unsigned char method;
+
+		char *strMRFN, *strName;
+
+		#define unpackString(buf,len) \
+		{ \
+			buf = new char[ len +1 ]; \
+			msf.Read( buf, len ); \
+			buf[ len ] = 0; \
+		}
+
+		while( ( msf.Position() < msf.Size() ) && ( errors < 10 ) )
 		{
 			method = msf.ReadByte();
 			msf.Read( &info, sizeof( FILEINDEX_ENTRY ) );
-			
-			msf.Seek( info.lenMRFN + info.lenName, bufo_skip );
 
-			/*
-			if( !( extractItem( clientPath, info, method ) ) )
+			unpackString( strMRFN, info.lenMRFN );
+			unpackString( strName, info.lenName );
+
+			if( !( extractItem( info, method, strMRFN, strName ) ) )
 			{
-				// error and break out ?
+				++errors;
 			}
-			*/
 
 			++items;
+
+			delete strMRFN;
+			delete strName;
 		}
 
-		printf("Found %u items\n", items);
+		if( errors > 9 )
+			printf("ERROR: Failed to extract too many files.\n");
+		else
+			printf("Found %u items\n", items);
 	}
 
 	msf.Close();
@@ -102,9 +146,19 @@ int main( int argc, char **argv )
 {
 	printf("z3ResEx\nWritten by x1nixmzeng\n\n");
 
-	bool doExtraction( false );
+	/*
+		Possible arguments
 
-	extractionMain("", 0);
+		REQ
+			Client version
+		Client path (i.e not current directory)
+		Verbose output
+	*/
+
+
+	bool doExtraction( false );
+	
+	extractionMain( 0);
 
 	if( argc == 2 )
 	{

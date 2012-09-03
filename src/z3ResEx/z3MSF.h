@@ -13,7 +13,7 @@
 
 enum FILEINDEX_ENTRY_METHOD
 {
-	FILEINDEX_ENTRY_COMPRESSED = 0x0,
+	FILEINDEX_ENTRY_COMPRESSED		= 0x0,
 	FILEINDEX_ENTRY_COMPRESSED2,
 	FILEINDEX_ENTRY_UNCOMPRESSED
 };
@@ -35,7 +35,7 @@ struct FILEINDEX_ENTRY
 	DWORD size;		// Uncompressed filesize
 	DWORD offset;	// MRF file position
 	DWORD zsize;	// Size of compressed data
-	DWORD xorkey;	// Used in certain compressed file (when flag == 1)
+	DWORD xorkey;	// Secret key used for file scrambling
 	short lenMRFN;	// MRF container name length
 	short lenName;	// Filename length
 };
