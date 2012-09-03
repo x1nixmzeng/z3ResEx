@@ -1,0 +1,30 @@
+# VS
+
+*.sdf
+*.opensdf
+*.suo
+*.vcxproj.user
+
+# VS build
+
+*.pdb
+*.obj
+*.lastbuildstate
+*.log
+*.tlog
+*.idb
+src/ipch/*
+*.ilk
+*.intermediate.manifest
+*.unsuccessfulbuild
+
+# Other
+
+cryptolib.lib
+src/cryptolib/Debug/*
+src/cryptolib/Release/*
+src/Debug/*
+fileindex.msf
+*.mrf
+README.md
+
