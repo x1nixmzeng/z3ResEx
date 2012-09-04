@@ -17,6 +17,7 @@
 // Included local
 #include "keys.h"
 #include "mbuffer.h"
+#include "z3MSF.h"
 
 #include "z3Rle.h"
 #include "z3Xor.h"
@@ -98,14 +99,15 @@ bool fsRle( TMemoryStream &src, TMemoryStream &dst, bool isFIndex = true /*todo:
 /*
 	z3Xor
 */
-
-// todo
-
+__inline void fsXor( FILEINDEX_ENTRY &info, TMemoryStream &src )
+{
+	z3Xor::rs3Unscramble( src.Data(), src.Size(), info.xorkey );
+}
 
 /*
 	Misc
 */
-bool fsReadMSF( TMemoryStream &msf )
+bool fsReadMSF( TMemoryStream &msf, unsigned char *z3Key )
 {
 	const std::string msfName( "fileindex.msf" );
 
@@ -127,7 +129,7 @@ bool fsReadMSF( TMemoryStream &msf )
 	}
 
 	// Attempt to decrypt the data
-	if( !( z3Decrypt( Z3_KEY_GUNZ2_NETMARBLE, fileIndex, fileIndex_dec ) ) )
+	if( !( z3Decrypt( z3Key, fileIndex, fileIndex_dec ) ) )
 	{
 		fileIndex.Close();
 		printf("ERROR: Unable to decrypt fileindex (did you use the right key?)\n");

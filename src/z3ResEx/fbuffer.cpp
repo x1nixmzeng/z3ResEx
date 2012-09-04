@@ -129,3 +129,12 @@ bool fbuffer::Write( void *srcBuf, unsigned int size )
 
 	return( fwrite( srcBuf, 1, size, fHandle ) == size );
 }
+
+
+unsigned int TFileSize( const char *filename )
+{
+	TFileStream tmpFs( filename );
+	return( tmpFs.Size() );
+}
+
+

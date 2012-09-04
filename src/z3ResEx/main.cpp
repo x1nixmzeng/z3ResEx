@@ -5,6 +5,7 @@
 	main.cpp
 
 	Initial version
+	Added basic extraction resuming (when file exists and filesize matches)
 */
 
 #include <stdio.h>
@@ -17,9 +18,11 @@
 #include "z3MSF.h"
 #include "keys.h"
 
-// Import methods
+// Import data manipulation methods
 #include "methods.h"
 
+
+/* todo: move this to xbuffer? */
 void fsCreatePath( std::string &strPath )
 {
 	int pathLoc( strPath.find('/') );
@@ -49,8 +52,6 @@ std::string fsRename( char *strMrf, char *strName )
 
 bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, char *strName )
 {
-	// Load MRF
-
 	TFileStream mrf( strMrf );
 
 	if( !( mrf.isOpen() ) )
@@ -59,32 +60,95 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 		return false;
 	}
 
-	mrf.Seek( info.offset, bufo_start );
+	// Format the output filename
+	std::string fname( fsRename( strMrf, strName ) );
+	
+	// UNFORCED EXTRACTION
+	// If file already exists, ignore it
+	if( TFileSize( fname.c_str() ) == info.size )
+	{
+		mrf.Close();
+		return true;
+	}
 
 	unsigned char *buf( new unsigned char[ info.zsize ] );
+
+	// Load MRF data into buffer
+	mrf.Seek( info.offset, bufo_start );
 	mrf.Read( buf, info.zsize );
 	mrf.Close();
 
+	// Copy into TStream
 	TMemoryStream fdata;
 	fdata.LoadFromBuffer( buf, info.zsize );
-
 	delete buf;
 
-	if( method == FILEINDEX_ENTRY_COMPRESSED )
+	printf("Saving %s.. ", fname.substr( fname.rfind('/') +1 ).c_str() );
+
+	fsCreatePath( fname );
+
+	switch( method )
 	{
-		z3Xor::rs3Unscramble( fdata.Data(), fdata.Size(), info.xorkey );
-
-		TMemoryStream fdata_raw;
-		if( fsRle( fdata, fdata_raw, false ) )
+		case FILEINDEX_ENTRY_COMPRESSED :
 		{
-			printf("Got file data!\n");
+			fsXor( info, fdata );
 
-			// todo: save it
+			TMemoryStream fdata_raw;
+			if( fsRle( fdata, fdata_raw, false ) )
+			{
+				fdata_raw.SaveToFile( fname.c_str() );
+				printf("done!\n");
+			}
+		
+			// fsRle will display any errors
+
+			fdata_raw.Close();
+			break;
 		}
 
+		case FILEINDEX_ENTRY_COMPRESSED2 :
+		{
+			TMemoryStream fdata_dec;
+			z3Decrypt( Z3_KEY_GZ2_NETMARBLE_CBT, fdata, fdata_dec );
+			fdata.Close();
 
-		fdata_raw.Close();
+			// Now same as FILEINDEX_ENTRY_COMPRESSED
+
+			fsXor( info, fdata_dec );
+
+			TMemoryStream fdata_raw;
+			if( fsRle( fdata_dec, fdata_raw, false ) )
+			{
+				fdata_raw.SaveToFile( fname.c_str() );
+				printf("done!\n");
+			}
 		
+			// fsRle will display any errors
+
+			fdata_dec.Close();
+			fdata_raw.Close();
+
+			break;
+		}
+
+		case FILEINDEX_ENTRY_UNCOMPRESSED :
+		{
+			std::string fname( fsRename( strMrf, strName ) );
+			fsCreatePath( fname );
+
+			fdata.SaveToFile( fname.c_str() );
+			printf("done!\n");
+
+			break;
+		}
+
+		default:
+		{
+			fdata.Close();
+			printf("ERROR: Unknown compression type (%s)\n", strName);
+
+			return false;
+		}
 	}
 
 	fdata.Close();
@@ -92,12 +156,12 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 	return true;
 }
 
-void extractionMain( int resolvedType )
+void extractionMain( unsigned char *z3Key )
 {
 	TMemoryStream msf;
 
 	// Check the fileindex can be located and decrypted
-	if( fsReadMSF( msf ) )
+	if( fsReadMSF( msf, z3Key ) )
 	{
 		unsigned int items( 0 ), errors( 0 );
 
@@ -158,7 +222,7 @@ int main( int argc, char **argv )
 
 	bool doExtraction( false );
 	
-	extractionMain( 0);
+	extractionMain( Z3_KEY_GZ2_NETMARBLE_CBT );
 
 	if( argc == 2 )
 	{

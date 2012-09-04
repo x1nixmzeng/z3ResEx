@@ -8,7 +8,7 @@
 
 mbuffer::mbuffer( )
 {
-	buff = NULL;
+	buff = nullptr;
 	boff = 0;
 	size = 0;
 }
@@ -23,8 +23,8 @@ mbuffer::~mbuffer( )
 */
 void mbuffer::Close()
 {
-	if( buff ) free( buff );
-	buff = NULL;
+	if( buff ) delete buff;
+	buff = nullptr;
 	boff = 0;
 	size = 0;
 }
@@ -66,7 +66,7 @@ bool mbuffer::DataWrite( void *data, unsigned int count )
 {
 	Close();
 
-	if( !( buff = malloc( count ) ) )
+	if( !( buff = new unsigned char[ count ] ) )
 		return false;
 
 	boff = 0;
@@ -156,17 +156,30 @@ bool mbuffer::LoadFromFile( const char *filename )
 	{
 		unsigned int fileSize( fileInfo.Size() );
 
-		if( fileBuffer = (char *)malloc( fileSize ) )
+		if( fileBuffer = new char[ fileSize ] )
 		{
 			fileInfo.Read( fileBuffer, fileSize );
 			result = DataWrite( fileBuffer, fileSize );
-			free( fileBuffer );
+
+			delete fileBuffer;
 		}
 
 		fileInfo.Close();
 	}
 
 	return( result );
+}
+bool mbuffer::SaveToFile( const char *filename ) const
+{
+	TFileStream fileInfo( filename, true );
+
+	if( !( fileInfo.isOpen() ) )
+		return false;
+
+	fileInfo.Write( buff, size );
+	fileInfo.Close();
+
+	return true;
 }
 #endif
 
@@ -219,5 +232,4 @@ unsigned char *mbuffer::Data( ) const
 {
 	return (unsigned char *)buff;
 }
-
 

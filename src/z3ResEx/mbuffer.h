@@ -51,6 +51,7 @@ public:
 	bool LoadFromBuffer( void *, unsigned int );
 #ifdef MEMBUFFER_ALLOW_FILES
 	bool LoadFromFile( const char *filename );
+	bool SaveToFile( const char *filename ) const;
 #endif
 
 	bool Read( void *, unsigned int );

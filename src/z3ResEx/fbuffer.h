@@ -43,4 +43,13 @@ public:
 
 typedef fbuffer TFileStream;
 
+/*
+bool FileExists( const char *filename )
+{
+	TFileStream tmpFs( filename );
+	return( tmpFs.isOpen() );
+}*/
+
+unsigned int TFileSize( const char * );
+
 #endif

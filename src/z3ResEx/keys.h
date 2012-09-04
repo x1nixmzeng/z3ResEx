@@ -41,7 +41,7 @@ unsigned char Z3_KEY_RZ_PWE_ALPHA[ Z3_KEY_LENGTH ] =
 	0x29, 0x8B 
 };
 
-unsigned char Z3_KEY_RAIDERZ_PMANG_OBT[ Z3_KEY_LENGTH ] =
+unsigned char Z3_KEY_RZ_PMANG_OBT[ Z3_KEY_LENGTH ] =
 {
 	0x30, 0x81, 0xC7, 0x02, 0x01, 0x00, 0x30, 0x81,
 	0xA4, 0x06, 0x07, 0x2A, 0x86, 0x48, 0xCE, 0x3D,
@@ -71,7 +71,7 @@ unsigned char Z3_KEY_RAIDERZ_PMANG_OBT[ Z3_KEY_LENGTH ] =
 	0xA7, 0x96
 };
 
-unsigned char Z3_KEY_RAIDERZ_PWE_CBT[ Z3_KEY_LENGTH ] =
+unsigned char Z3_KEY_RZ_PWE_CBT[ Z3_KEY_LENGTH ] =
 {
 	0x30, 0x81, 0xC7, 0x02, 0x01, 0x00, 0x30, 0x81,
 	0xA4, 0x06, 0x07, 0x2A, 0x86, 0x48, 0xCE, 0x3D,
@@ -105,7 +105,7 @@ unsigned char Z3_KEY_RAIDERZ_PWE_CBT[ Z3_KEY_LENGTH ] =
 	GunZ2 has used the same key for all its tests (VIP/CBT)
 */
 
-unsigned char Z3_KEY_GUNZ2_NETMARBLE[ Z3_KEY_LENGTH ] =
+unsigned char Z3_KEY_GZ2_NETMARBLE[ Z3_KEY_LENGTH ] =
 {
 	0x30, 0x81, 0xC7, 0x02, 0x01, 0x00, 0x30, 0x81,
 	0xA4, 0x06, 0x07, 0x2A, 0x86, 0x48, 0xCE, 0x3D,
@@ -134,6 +134,10 @@ unsigned char Z3_KEY_GUNZ2_NETMARBLE[ Z3_KEY_LENGTH ] =
 	0x27, 0xDE, 0x21, 0x55, 0x21, 0xBF, 0x5C, 0x95,
 	0x67, 0x0B 
 };
+
+#define Z3_KEY_GZ2_NETMARBLE_VIP		Z3_KEY_GZ2_NETMARBLE
+#define Z3_KEY_GZ2_NETMARBLE_CBT		Z3_KEY_GZ2_NETMARBLE
+
 /*
 struct z3SupportedGame
 {
