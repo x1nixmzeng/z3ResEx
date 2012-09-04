@@ -97,7 +97,7 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 			fsXor( info, fdata );
 
 			TMemoryStream fdata_raw;
-			if( fsRle( fdata, fdata_raw, false ) )
+			if( fsRle( fdata, fdata_raw ) )
 			{
 				fdata_raw.SaveToFile( fname.c_str() );
 				printf("done!\n");
@@ -120,7 +120,7 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 			fsXor( info, fdata_dec );
 
 			TMemoryStream fdata_raw;
-			if( fsRle( fdata_dec, fdata_raw, false ) )
+			if( fsRle( fdata_dec, fdata_raw ) )
 			{
 				fdata_raw.SaveToFile( fname.c_str() );
 				printf("done!\n");
@@ -159,90 +159,116 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 	return true;
 }
 
-void extractionMain( unsigned char *z3Key )
+void extractionMain( TMemoryStream &msf )
 {
-	TMemoryStream msf;
+	const unsigned int MAX_ERRORS( 10 );
+	unsigned int items( 0 ), errors( 0 );
 
-	// Check the fileindex can be located and decrypted
-	if( fsReadMSF( msf, z3Key ) )
-	{
-		unsigned int items( 0 ), errors( 0 );
+	FILEINDEX_ENTRY info;
+	unsigned char method;
 
-		FILEINDEX_ENTRY info;
-		unsigned char method;
+	char *strMRFN, *strName;
 
-		char *strMRFN, *strName;
-
-		#define unpackString(buf,len) \
-		{ \
-			buf = new char[ len +1 ]; \
-			msf.Read( buf, len ); \
-			buf[ len ] = 0; \
-		}
-
-		while( ( msf.Position() < msf.Size() ) && ( errors < 10 ) )
-		{
-			method = msf.ReadByte();
-			msf.Read( &info, sizeof( FILEINDEX_ENTRY ) );
-
-			unpackString( strMRFN, info.lenMRFN );
-			unpackString( strName, info.lenName );
-
-			if( !( extractItem( info, method, strMRFN, strName ) ) )
-				++errors;
-
-			++items;
-
-			delete strMRFN;
-			delete strName;
-		}
-
-		if( errors > 9 )
-			printf("ERROR: Extraction stopped as there were too many errors\n");
-		else
-			printf("Extracted %u files (%u problems)\n", items, errors);
+	#define unpackString(buf,len) \
+	{ \
+		buf = new char[ len +1 ]; \
+		msf.Read( buf, len ); \
+		buf[ len ] = 0; \
 	}
 
-	msf.Close();
+	while( ( msf.Position() < msf.Size() ) && ( errors < MAX_ERRORS ) )
+	{
+		method = msf.ReadByte();
+		msf.Read( &info, sizeof( FILEINDEX_ENTRY ) );
+
+		unpackString( strMRFN, info.lenMRFN );
+		unpackString( strName, info.lenName );
+
+		if( !( extractItem( info, method, strMRFN, strName ) ) )
+			++errors;
+
+		++items;
+
+		delete strMRFN;
+		delete strName;
+	}
+
+	if( errors >= MAX_ERRORS )
+		printf("ERROR: Extraction stopped as there were too many errors\n");
+	else
+		printf("\nExtracted %u files (%u problems)\n", items, errors);	
 }
 
 
 int main( int argc, char **argv )
 {
-	printf("z3ResEx\nWritten by x1nixmzeng\n\n");
+	printf
+	(
+		"z3ResEx" \
+		"\nResearched and coded by x1nixmzeng\n\n"
+	);
+		
+	// Check arguments
+	if( argc > 1 )
+	{
+		if( SetCurrentDirectory( argv[1] ) == 0 )
+		{
+			printf("ERROR: Failed to set the client path (%s)\n", argv[1] );
+			return 0;
+		}
 
-	/*
-		Possible arguments
+		if( argc > 2 )
+		{
+			// For all other arguments, check against known flags
 
-		REQ
-			Client version
-		Client path (i.e not current directory)
-		Verbose output
-	*/
+			// -v		Verbose
+			// -x		No extraction
+			// -f		Extract only (filter)
 
-	// Brute force the key
+		}
+	}
+
+
+	// Check the fileindex exists
+	if( TFileSize( msfName ) == 0 )
+	{
+		printf("ERROR: Unable to open file (fileindex.msf)\n");
+	}
+	else
 	{
 		unsigned int keyIndex( 0 );
 		TMemoryStream msf;
 
+		// Brute-force the key
+		printf("Checking keys..\n");
+
 		while( ( keyIndex < Z3_KEY_LIST_LENGTH ) && ( msf.Size() == 0 ) )
 		{
 			if( fsReadMSF( msf, Z3_KEY_LIST[ keyIndex ] ) )
+			{
 				z3CurrentKey = Z3_KEY_LIST[ keyIndex ];
+
+				//printf("Found key (%u)!\n", keyIndex);
+				// Verbose? Show size
+				// msf.Size()
+			}
 
 			++keyIndex;
 		}
 
 		if( !( z3CurrentKey == nullptr ) )
 		{
-			printf("Found key (%u)!\n", keyIndex );
+			// Run main extraction loop
+			printf("Extracting..\n");
+			extractionMain( msf );
 		}
 		else
 		{
-			printf("Sorry, no key was found\n");
+			// No key found or incompatiable file (not checked)
+			printf("ERROR: Unable to use any known keys\n");
 		}
-		
 
+		msf.Close();
 	}
 
 	return 0;

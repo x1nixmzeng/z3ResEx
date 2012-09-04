@@ -54,13 +54,18 @@ bool z3Decrypt( unsigned char* key, TMemoryStream &src, TMemoryStream &dst )
 /*
 	z3Rle
 */
-bool fsRle( TMemoryStream &src, TMemoryStream &dst, bool isFIndex = true /*todo: expected size here?*/ )
+bool fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF = false )
 {
+	unsigned int msfSizeFlag;
 	unsigned int expectedSize, len;
 	unsigned char *pData( src.Data() );
 
-	// quickfix
-	if( isFIndex ) pData += 4;
+	if( isMSF )
+	{
+		// Read the expected size from data
+		msfSizeFlag = src.ReadUInt();
+		pData += 4;
+	}
 
 	if( !( z3Rle::decodeSize( pData, expectedSize, len ) ) )
 	{
@@ -69,7 +74,12 @@ bool fsRle( TMemoryStream &src, TMemoryStream &dst, bool isFIndex = true /*todo:
 		return false;
 	}
 
-	/*todo: check expected size and error if do not match*/
+	if( isMSF && !( msfSizeFlag == expectedSize ) )
+	{
+		dst.Close();
+		printf("ERROR: Unexpected MSF buffer size\n");
+		return false;
+	}
 
 	pData += len;
 
@@ -109,22 +119,18 @@ __inline void fsXor( FILEINDEX_ENTRY &info, TMemoryStream &src )
 */
 bool fsReadMSF( TMemoryStream &msf, unsigned char *z3Key )
 {
-	const std::string msfName( "fileindex.msf" );
-
 	TMemoryStream fileIndex, fileIndex_dec;
 
-	// Check we can open the file for reading
-	if( !( fileIndex.LoadFromFile( msfName.c_str() ) ) )
+	// Check we can open the file for reading (NOTE: this is already check in main)
+	if( !( fileIndex.LoadFromFile( msfName ) ) )
 	{
-		printf("ERROR: Unable to open file (%s)\n", msfName.c_str() );
 		return false;
 	}
 
-	// Double-check the filesize
+	// Double-check the filesize (NOTE: this is already check in main)
 	if( !( fileIndex.Size() > 0 ) )
 	{
 		fileIndex.Close();
-		printf("ERROR: File is empty (%s)\n", msfName.c_str() );
 		return false;
 	}
 
@@ -132,21 +138,19 @@ bool fsReadMSF( TMemoryStream &msf, unsigned char *z3Key )
 	if( !( z3Decrypt( z3Key, fileIndex, fileIndex_dec ) ) )
 	{
 		fileIndex.Close();
-		printf("ERROR: Unable to decrypt fileindex (did you use the right key?)\n");
 		return false;
 	}
 
 	fileIndex.Close();
 	
 	// Attempt to uncompress the data
-	if( !( fsRle( fileIndex_dec, msf ) ) )
+	if( !( fsRle( fileIndex_dec, msf, true ) ) )
 	{
 		fileIndex_dec.Close();
 		return false;
 	}
 
 	// Success! File has been converted to plaintext!
-	printf("MSF has been extracted (%u bytes)!\n", msf.Size());
 	
 	fileIndex.Close();
 	fileIndex_dec.Close();

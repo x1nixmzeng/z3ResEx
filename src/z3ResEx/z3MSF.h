@@ -11,6 +11,8 @@
 
 #include <windows.h>
 
+const char *msfName( "fileindex.msf" );
+
 enum FILEINDEX_ENTRY_METHOD
 {
 	FILEINDEX_ENTRY_COMPRESSED		= 0x0,
