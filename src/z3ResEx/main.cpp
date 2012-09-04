@@ -22,6 +22,9 @@
 #include "methods.h"
 
 
+unsigned char *z3CurrentKey( nullptr );
+
+
 /* todo: move this to xbuffer? */
 void fsCreatePath( std::string &strPath )
 {
@@ -109,7 +112,7 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 		case FILEINDEX_ENTRY_COMPRESSED2 :
 		{
 			TMemoryStream fdata_dec;
-			z3Decrypt( Z3_KEY_GZ2_NETMARBLE_CBT, fdata, fdata_dec );
+			z3Decrypt( z3CurrentKey, fdata, fdata_dec );
 			fdata.Close();
 
 			// Now same as FILEINDEX_ENTRY_COMPRESSED
@@ -186,9 +189,7 @@ void extractionMain( unsigned char *z3Key )
 			unpackString( strName, info.lenName );
 
 			if( !( extractItem( info, method, strMRFN, strName ) ) )
-			{
 				++errors;
-			}
 
 			++items;
 
@@ -197,9 +198,9 @@ void extractionMain( unsigned char *z3Key )
 		}
 
 		if( errors > 9 )
-			printf("ERROR: Failed to extract too many files.\n");
+			printf("ERROR: Extraction stopped as there were too many errors\n");
 		else
-			printf("Found %u items\n", items);
+			printf("Extracted %u files (%u problems)\n", items, errors);
 	}
 
 	msf.Close();
@@ -219,34 +220,30 @@ int main( int argc, char **argv )
 		Verbose output
 	*/
 
-
-	bool doExtraction( false );
-	
-	extractionMain( Z3_KEY_GZ2_NETMARBLE_CBT );
-
-	if( argc == 2 )
+	// Brute force the key
 	{
+		unsigned int keyIndex( 0 );
+		TMemoryStream msf;
+
+		while( ( keyIndex < Z3_KEY_LIST_LENGTH ) && ( msf.Size() == 0 ) )
+		{
+			if( fsReadMSF( msf, Z3_KEY_LIST[ keyIndex ] ) )
+				z3CurrentKey = Z3_KEY_LIST[ keyIndex ];
+
+			++keyIndex;
+		}
+
+		if( !( z3CurrentKey == nullptr ) )
+		{
+			printf("Found key (%u)!\n", keyIndex );
+		}
+		else
+		{
+			printf("Sorry, no key was found\n");
+		}
 		
+
 	}
-
-	/*
-
-	if( !( doExtraction ) )
-	{
-		printf(
-			"Usage:\n" \
-			"  z3resex.exe <game_id> <game_path> [-vd]\n\n" \
-			"Supported game_id:\n"
-		);
-
-		// see keys.h
-		for(int i=0;i<4;++i)
-			printf("  %s (%s)\n", game_ids[i].z3Option, game_ids[i].z3Game);
-
-		printf("\n");
-	}
-
-	*/
 
 	return 0;
 }

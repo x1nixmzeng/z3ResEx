@@ -6,6 +6,17 @@ Extracts the filesystem from **RaiderZ** and **GunZ: The Second Duel**.
 
 ## Download
 
+    Project is not ready for release
+
+
+## Compiling
+
+The project was compiled with Microsoft Visual C++ 2010, and requires the Crypto++ library.
+
+To compile z3ResEx, you need to first generate the Crypto++ `.lib` files, which is done by rebuilding the **cryptolib** project.
+
+    NOTE: There are known problems with release mode
+
 
 ## Credits
 
