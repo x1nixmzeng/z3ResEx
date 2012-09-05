@@ -21,6 +21,11 @@
 // Import data manipulation methods
 #include "methods.h"
 
+#ifdef _DEBUG
+	#define SAVE_MSF_FILEINDEX
+	#define DO_NOT_SAVE_DATA
+	#define VERBOSE
+#endif
 
 unsigned char *z3CurrentKey( nullptr );
 
@@ -66,6 +71,10 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 	// Format the output filename
 	std::string fname( fsRename( strMrf, strName ) );
 	
+#ifdef VERBOSE
+	printf("Using filename: %s\n", fname.c_str());
+#endif
+
 	// UNFORCED EXTRACTION
 	// If file already exists, ignore it
 	if( TFileSize( fname.c_str() ) == info.size )
@@ -76,30 +85,54 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 
 	unsigned char *buf( new unsigned char[ info.zsize ] );
 
+#ifdef VERBOSE
+	printf("Allocated %u bytes\n", info.zsize);
+#endif
+
 	// Load MRF data into buffer
 	mrf.Seek( info.offset, bufo_start );
 	mrf.Read( buf, info.zsize );
 	mrf.Close();
+
+#ifdef VERBOSE
+	printf("Read %u bytes at %u\n", info.zsize, info.offset );
+#endif
 
 	// Copy into TStream
 	TMemoryStream fdata;
 	fdata.LoadFromBuffer( buf, info.zsize );
 	delete buf;
 
+#ifdef DO_NOT_SAVE_DATA
+	printf("Testing %s.. ", fname.substr( fname.rfind('/') +1 ).c_str() );
+#else
 	printf("Saving %s.. ", fname.substr( fname.rfind('/') +1 ).c_str() );
+#endif
 
 	fsCreatePath( fname );
 
 	switch( method )
 	{
+		// Compressed, most files
 		case FILEINDEX_ENTRY_COMPRESSED :
 		{
 			fsXor( info, fdata );
+		#ifdef VERBOSE
+			printf("Complete XOR routine\n");
+		#endif
+
+			// ### Bugtesting only
+			// fdata.SaveToFile("_upload_me.dat");
 
 			TMemoryStream fdata_raw;
 			if( fsRle( fdata, fdata_raw ) )
 			{
+			#ifdef VERBOSE
+				printf("Completed RLE routine\n");
+			#endif
+			#ifndef DO_NOT_SAVE_DATA
 				fdata_raw.SaveToFile( fname.c_str() );
+			#endif
 				printf("done!\n");
 			}
 		
@@ -109,6 +142,7 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 			break;
 		}
 
+		// Encrypted and compressed, some system data (GunZ 2)
 		case FILEINDEX_ENTRY_COMPRESSED2 :
 		{
 			TMemoryStream fdata_dec;
@@ -122,7 +156,9 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 			TMemoryStream fdata_raw;
 			if( fsRle( fdata_dec, fdata_raw ) )
 			{
+			#ifndef DO_NOT_SAVE_DATA
 				fdata_raw.SaveToFile( fname.c_str() );
+			#endif
 				printf("done!\n");
 			}
 		
@@ -134,12 +170,12 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 			break;
 		}
 
+		// Large files, some FSB (GunZ 2)
 		case FILEINDEX_ENTRY_UNCOMPRESSED :
 		{
-			std::string fname( fsRename( strMrf, strName ) );
-			fsCreatePath( fname );
-
+		#ifndef DO_NOT_SAVE_DATA
 			fdata.SaveToFile( fname.c_str() );
+		#endif
 			printf("done!\n");
 
 			break;
@@ -148,7 +184,7 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 		default:
 		{
 			fdata.Close();
-			printf("ERROR: Unknown compression type (%s)\n", strName);
+			printf("ERROR: Unknown compression type (%02X)\n", method);
 
 			return false;
 		}
@@ -161,7 +197,7 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 
 void extractionMain( TMemoryStream &msf )
 {
-	const unsigned int MAX_ERRORS( 10 );
+	const unsigned int MAX_ERRORS( 50 );
 	unsigned int items( 0 ), errors( 0 );
 
 	FILEINDEX_ENTRY info;
@@ -175,6 +211,13 @@ void extractionMain( TMemoryStream &msf )
 		msf.Read( buf, len ); \
 		buf[ len ] = 0; \
 	}
+
+#ifdef SAVE_MSF_FILEINDEX
+	msf.SaveToFile("z3debug_fileindex.msf");
+#endif
+
+//	printf("Seeking to Riode/Riode.small.collision.pathengine..\n");
+//	msf.Seek( 2613618, bufo_start );
 
 	while( ( msf.Position() < msf.Size() ) && ( errors < MAX_ERRORS ) )
 	{
@@ -232,7 +275,7 @@ int main( int argc, char **argv )
 	// Check the fileindex exists
 	if( TFileSize( msfName ) == 0 )
 	{
-		printf("ERROR: Unable to open file (fileindex.msf)\n");
+		printf("ERROR: Unable to open file (%s)\n", msfName);
 	}
 	else
 	{

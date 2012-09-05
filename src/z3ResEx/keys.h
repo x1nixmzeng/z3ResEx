@@ -6,8 +6,7 @@
 		Extracted keys from client executables
 	
 	NOTES
-		My publisher data is wrong, so this is still a messy layout
-		It may be possible to brute the keys
+		My publisher data is wrong, so I choose to brute force the keys
 */
 
 #ifndef _H_KEYS_
@@ -56,6 +55,7 @@ unsigned char Z3_KEY_RAIDERZ_KR_NA[ Z3_KEY_LENGTH ] =
 /*
 	RaiderZ keys
 		r35337	8E405793A58A8A25EC45D1FFC0F860E1	Gameforge CBT
+		r35608	60D16239B0DBC4E2F4E6774F69A5686E	PMANG Ep1
 */
 unsigned char Z3_KEY_RAIDERZ_EU[ Z3_KEY_LENGTH ] =
 {

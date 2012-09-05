@@ -77,7 +77,8 @@ namespace z3Rle
 		// Length of additional bytes (5-bits of instruction)
 		instructionExSize = instruction >> 11;
 
-		if( instructionExSize > 4 )
+		// todo: fix rare cases where exsize is 32-bits (Riode.small.pathfind.pathengine)
+		if( instructionExSize > 3 )
 			return false;
 
 		// Read these additional bytes (only 4 are supported)
