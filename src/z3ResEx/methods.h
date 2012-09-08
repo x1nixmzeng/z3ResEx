@@ -58,7 +58,7 @@ bool fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF = false )
 {
 	unsigned int msfSizeFlag;
 	unsigned int expectedSize, len;
-	unsigned char *pData( src.Data() );
+	unsigned char *pData( src.Data() ), *pDataEnd( pData + src.Size() );
 
 	if( isMSF )
 	{
@@ -81,6 +81,7 @@ bool fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF = false )
 		return false;
 	}
 
+	// Skip the length of the expected size
 	pData += len;
 
 	unsigned char *tmpBuffer( new unsigned char[ expectedSize ] );
@@ -88,7 +89,7 @@ bool fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF = false )
 
 	while( tmpOffset < expectedSize )
 	{
-		if( !( z3Rle::decodeInstruction( pData, len, tmpBuffer, tmpOffset ) ) )
+		if( !( z3Rle::decodeInstruction( pData, len, pDataEnd, tmpBuffer, tmpOffset ) ) )
 		{
 			delete tmpBuffer;
 			printf("ERROR: Problems decoding RLE buffer\n");

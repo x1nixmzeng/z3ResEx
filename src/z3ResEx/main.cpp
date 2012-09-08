@@ -22,9 +22,9 @@
 #include "methods.h"
 
 #ifdef _DEBUG
-	#define SAVE_MSF_FILEINDEX
+	//#define SAVE_MSF_FILEINDEX
 	#define DO_NOT_SAVE_DATA
-	#define VERBOSE
+	//#define VERBOSE
 #endif
 
 unsigned char *z3CurrentKey( nullptr );

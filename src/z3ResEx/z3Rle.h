@@ -16,13 +16,12 @@ namespace z3Rle
 	#include "tables.h"
 
 	/*
-		Extracts the filesize from header bytes
-
-		Each header byte
-			.. has the left-most bit marked as 1
-			.. contains 7-bits of data which needs reconstructing
+		Method to store variable size value
+		Keeps reading until the 8th bit is 0
 
 		NOTE: Only a basic shift overflow check
+
+		This method looks common in lz compression (lz.c uses it)
 	*/
 
 	struct codedSizeByte
@@ -60,7 +59,13 @@ namespace z3Rle
 		return true;
 	}
 
-	bool decodeInstruction( unsigned char *data, unsigned int &count, unsigned char *buff, unsigned int &bufCount )
+	bool decodeInstruction(
+		unsigned char *data,		// Source buffer
+		unsigned int &count,		// Size of last instruction
+		unsigned char *dataLength,	// End of source buffer
+		unsigned char *buff,		// Destination buffer
+		unsigned int &bufCount		// Destination buffer offset
+	)
 	{
 		unsigned char cmdMarker;
 		unsigned int instruction, instructionExSize, buf32;
@@ -77,12 +82,13 @@ namespace z3Rle
 		// Length of additional bytes (5-bits of instruction)
 		instructionExSize = instruction >> 11;
 
-		// todo: fix rare cases where exsize is 32-bits (Riode.small.pathfind.pathengine)
-		if( instructionExSize > 3 )
+		// 5 sizes are supported in the client (0,1,2,3,4)
+		if( instructionExSize > 4 )
 			return false;
 
-		// Read these additional bytes (only 4 are supported)
 		buf32 = 0;
+
+		// Read these additional bytes
 		for( unsigned int i(0 ); i < instructionExSize; ++i, ++count )
 		{
 			// Read another byte into buf32
@@ -102,6 +108,10 @@ namespace z3Rle
 			srcOffset = ( instruction & 0x700 ) + buf32;
 			msgLength = ( instruction & 0xFF );
 
+			// Check for invalid modulus and invalid source offset (corrupted data)
+			if( ( srcOffset == 0 ) || ( srcOffset > bufCount ) )
+				return false;
+
 			// Copy data from existing buffer
 			for(unsigned int i = 0; i < msgLength; ++i )
 				*(buff+bufCount+i) = *(buff+bufCount-(srcOffset - (i % srcOffset)));
@@ -115,6 +125,10 @@ namespace z3Rle
 			unsigned int msgLength;
 
 			msgLength = ( instruction & 0xFF ) + buf32;
+
+			// Check data source (source buffer) has enough data
+			if( data+count+msgLength > dataLength )
+				return false;
 
 			// Copy data from buffer
 			memcpy( buff+bufCount, data+count, msgLength );
