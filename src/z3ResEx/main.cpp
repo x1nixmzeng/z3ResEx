@@ -21,14 +21,26 @@
 // Import data manipulation methods
 #include "methods.h"
 
+// Global pointer to current key
+unsigned char *z3CurrentKey( nullptr );
+
 #ifdef _DEBUG
 	//#define SAVE_MSF_FILEINDEX
 	#define DO_NOT_SAVE_DATA
 	//#define VERBOSE
 #endif
 
-unsigned char *z3CurrentKey( nullptr );
+// Global option flags
 
+bool user_opt_allow_extraction(
+	#if defined( _DEBUG ) && defined( DO_NOT_SAVE_DATA )
+		false
+	#else
+		true
+	#endif
+);
+
+bool user_opt_list_files( false );
 
 /* todo: move this to xbuffer? */
 void fsCreatePath( std::string &strPath )
@@ -103,13 +115,15 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 	fdata.LoadFromBuffer( buf, info.zsize );
 	delete buf;
 
-#ifdef DO_NOT_SAVE_DATA
-	printf("Testing %s.. ", fname.substr( fname.rfind('/') +1 ).c_str() );
-#else
-	printf("Saving %s.. ", fname.substr( fname.rfind('/') +1 ).c_str() );
-#endif
+	printf
+	(	
+		( user_opt_allow_extraction ? "Saving %s.. " : "Checking %s.. " ),
+		fname.substr( fname.rfind('/') +1 ).c_str()
+	);
 
-	fsCreatePath( fname );
+	// Create path only when extraction is flagged
+	if( user_opt_allow_extraction )
+		fsCreatePath( fname );
 
 	switch( method )
 	{
@@ -121,18 +135,16 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 			printf("Complete XOR routine\n");
 		#endif
 
-			// ### Bugtesting only
-			// fdata.SaveToFile("_upload_me.dat");
-
 			TMemoryStream fdata_raw;
 			if( fsRle( fdata, fdata_raw ) )
 			{
 			#ifdef VERBOSE
 				printf("Completed RLE routine\n");
 			#endif
-			#ifndef DO_NOT_SAVE_DATA
-				fdata_raw.SaveToFile( fname.c_str() );
-			#endif
+			
+				if( user_opt_allow_extraction )
+					fdata_raw.SaveToFile( fname.c_str() );
+
 				printf("done!\n");
 			}
 		
@@ -156,9 +168,9 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 			TMemoryStream fdata_raw;
 			if( fsRle( fdata_dec, fdata_raw ) )
 			{
-			#ifndef DO_NOT_SAVE_DATA
-				fdata_raw.SaveToFile( fname.c_str() );
-			#endif
+				if( user_opt_allow_extraction )
+					fdata_raw.SaveToFile( fname.c_str() );
+
 				printf("done!\n");
 			}
 		
@@ -173,9 +185,9 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 		// Large files, some FSB (GunZ 2)
 		case FILEINDEX_ENTRY_UNCOMPRESSED :
 		{
-		#ifndef DO_NOT_SAVE_DATA
-			fdata.SaveToFile( fname.c_str() );
-		#endif
+			if( user_opt_allow_extraction )
+				fdata.SaveToFile( fname.c_str() );
+
 			printf("done!\n");
 
 			break;
@@ -198,12 +210,12 @@ bool extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, cha
 void extractionMain( TMemoryStream &msf )
 {
 	const unsigned int MAX_ERRORS( 50 );
-	unsigned int items( 0 ), errors( 0 );
+	unsigned int items( 0 );
 
 	FILEINDEX_ENTRY info;
 	unsigned char method;
 
-	char *strMRFN, *strName;
+	char *strMRFN( nullptr ), *strName( nullptr );
 
 	#define unpackString(buf,len) \
 	{ \
@@ -216,30 +228,62 @@ void extractionMain( TMemoryStream &msf )
 	msf.SaveToFile("z3debug_fileindex.msf");
 #endif
 
-//	printf("Seeking to Riode/Riode.small.collision.pathengine..\n");
-//	msf.Seek( 2613618, bufo_start );
-
-	while( ( msf.Position() < msf.Size() ) && ( errors < MAX_ERRORS ) )
+	// Are we just listing files?
+	if( user_opt_list_files )
 	{
-		method = msf.ReadByte();
-		msf.Read( &info, sizeof( FILEINDEX_ENTRY ) );
+		std::string fname;
 
-		unpackString( strMRFN, info.lenMRFN );
-		unpackString( strName, info.lenName );
+		printf("Listing filesystem contents\n\n");
 
-		if( !( extractItem( info, method, strMRFN, strName ) ) )
-			++errors;
+		while( msf.Position() < msf.Size() )
+		{
+			method = msf.ReadByte();
+			msf.Read( &info, sizeof( FILEINDEX_ENTRY ) );
 
-		++items;
+			unpackString( strMRFN, info.lenMRFN );
+			unpackString( strName, info.lenName );
 
-		delete strMRFN;
-		delete strName;
+			fname = fsRename( strMRFN, strName );
+			printf("%s\n", fname.c_str());
+			
+			++items;
+
+			delete strMRFN;
+			delete strName;
+		}
+
+		fname.clear();
+		printf("\nLocated %u files\n", items);
 	}
-
-	if( errors >= MAX_ERRORS )
-		printf("ERROR: Extraction stopped as there were too many errors\n");
 	else
-		printf("\nExtracted %u files (%u problems)\n", items, errors);	
+	// Run the main extraction loop
+	{
+		unsigned int errors( 0 );
+
+		printf("Extracting filesystem contents\n\n");
+
+		while( ( msf.Position() < msf.Size() ) && ( errors < MAX_ERRORS ) )
+		{
+			method = msf.ReadByte();
+			msf.Read( &info, sizeof( FILEINDEX_ENTRY ) );
+
+			unpackString( strMRFN, info.lenMRFN );
+			unpackString( strName, info.lenName );
+
+			if( !( extractItem( info, method, strMRFN, strName ) ) )
+				++errors;
+
+			++items;
+
+			delete strMRFN;
+			delete strName;
+		}
+
+		if( errors >= MAX_ERRORS )
+			printf("ERROR: Extraction stopped as there were too many errors\n");
+		else
+			printf("\nExtracted %u files (%u problems)\n", items, errors);
+	}
 }
 
 
@@ -264,13 +308,30 @@ int main( int argc, char **argv )
 		{
 			// For all other arguments, check against known flags
 
-			// -v		Verbose
-			// -x		No extraction
-			// -f		Extract only (filter)
+			if( argv[2][0] == '-' )
+			{
+				// -v		Verbose
+				// todo
+
+				// -l		List all files
+				if( argv[2][1] == 'l' )
+				{
+					user_opt_list_files = true;
+				}
+				else
+				
+				// -x		No extraction
+				if( argv[2][1] == 'x' )
+				{
+					user_opt_allow_extraction = false;
+				}
+
+				// -f		Extract only (filter)
+				// todo
+			}
 
 		}
 	}
-
 
 	// Check the fileindex exists
 	if( TFileSize( msfName ) == 0 )
@@ -283,17 +344,13 @@ int main( int argc, char **argv )
 		TMemoryStream msf;
 
 		// Brute-force the key
-		printf("Checking keys..\n");
-
 		while( ( keyIndex < Z3_KEY_LIST_LENGTH ) && ( msf.Size() == 0 ) )
 		{
 			if( fsReadMSF( msf, Z3_KEY_LIST[ keyIndex ] ) )
 			{
 				z3CurrentKey = Z3_KEY_LIST[ keyIndex ];
-
-				//printf("Found key (%u)!\n", keyIndex);
-				// Verbose? Show size
-				// msf.Size()
+				
+				// todo: verbose? - show key
 			}
 
 			++keyIndex;
@@ -302,13 +359,15 @@ int main( int argc, char **argv )
 		if( !( z3CurrentKey == nullptr ) )
 		{
 			// Run main extraction loop
-			printf("Extracting..\n");
+			if( !( user_opt_allow_extraction ) )
+				printf("NOTE:  Opted NOT to save data\n");
+
 			extractionMain( msf );
 		}
 		else
 		{
 			// No key found or incompatiable file (not checked)
-			printf("ERROR: Unable to use any known keys\n");
+			printf("ERROR: This file is using an updated key or unsupported method\n");
 		}
 
 		msf.Close();

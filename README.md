@@ -1,7 +1,7 @@
 ﻿z3ResEx
 =======
 
-Extracts the filesystem from **RaiderZ** and **GunZ: The Second Duel**.
+Extracts the filesystem from **RaiderZ** and **GunZ: The Second Duel** clients.
 
 
 ## Download
@@ -10,9 +10,19 @@ Latest build: ![z3ResEx.exe](https://raw.github.com/x1nixmzeng/z3ResEx/master/sr
 
 ## Usage
 
-    z3ResEx.exe [client_path]
+    z3ResEx.exe [client_path] [-v|l]
 
-To begin immediate extraction from the current directory, run from the command line without any arguments.
+To begin immediate extraction from the current directory, run from the command line without any arguments:
+
+    z3ResEx.exe
+
+To run without extracting any file data:
+
+    z3ResEx.exe . -v
+
+To list all files in the filesystem:
+
+    z3ResEx.exe . -l
 
 
 ## Compiling
