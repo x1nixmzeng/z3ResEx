@@ -24,6 +24,12 @@ To list all files in the filesystem:
 
     z3ResEx.exe . -l
 
+### Advanced Usage
+
+Save all the filenames from the `Sound` archives to file:
+
+    z3ResEx.exe "C:\Perfect World Entertainment\RaiderZ" -l |find "datadump/Data/Sound" > sounds.txt
+
 
 ## Compiling
 
