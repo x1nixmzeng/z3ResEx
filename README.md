@@ -6,7 +6,7 @@ Extracts the filesystem from **RaiderZ** and **GunZ: The Second Duel** clients.
 
 ## Download
 
-Latest build: ![z3ResEx.exe][latest-build]
+Latest build: [z3ResEx.exe][latest-build]
 
 ## Usage
 
