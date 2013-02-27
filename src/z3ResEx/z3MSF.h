@@ -67,12 +67,4 @@ struct FILEINDEX_ENTRY2
 };
 #pragma pack( pop )
 
-struct FILEINDEX_HEADER
-{
-	unsigned int size;
-	unsigned int unknown1;
-	unsigned short unknown2;
-	unsigned short mrfIndexLen;
-};
-
 #endif

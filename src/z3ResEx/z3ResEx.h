@@ -63,17 +63,18 @@ class z3ResEx
 	void setMessage( const char *, const unsigned int );
 
 	// Misc functions
-	std::string fsRename( char *, char * ) const;
+	std::string fsRename( const char *, const char * ) const;
 	void unpackStringEx( TMemoryStream &, unsigned char *&, const unsigned int ) const;
 	void fsCreatePath( std::string &strPath ) const;
 
 	// Extraction functions
+	bool extractItem2( FILEINDEX_ENTRY2 &, const string &, char * );
 	bool extractItem( FILEINDEX_ENTRY &, unsigned char, char *, char * );
 
 	// Helper functions
 	bool z3Decrypt( TMemoryStream &, TMemoryStream &, unsigned char *, unsigned int );
 	bool fsRle( TMemoryStream &, TMemoryStream &, bool isMSF = false );
-	void fsXor( FILEINDEX_ENTRY &, TMemoryStream & );
+	void fsXor( TMemoryStream &, unsigned int ) const;
 
 	// Fileindex loading function
 	bool fsReadMSF( TMemoryStream &, unsigned char *, unsigned int, int );

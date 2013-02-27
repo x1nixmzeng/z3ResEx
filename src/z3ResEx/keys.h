@@ -142,6 +142,7 @@ unsigned char *Z3_KEY_LIST[ Z3_KEY_LIST_LENGTH ] =
 /*
 	GunZ2 Keys (updated fileindex method)
 		r33005		Feb 19th 2013
+		r33297		Feb 25th 2013
 */
 
 const unsigned int Z3_KEY_LENGTH_METHOD2( 515 );
