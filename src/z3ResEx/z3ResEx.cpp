@@ -18,6 +18,21 @@ z3ResEx::z3ResEx( )
 	*m_lastMsg = 0;
 }
 
+void z3ResEx::setMessage( const char *msgFormat )
+{
+	sprintf_s( m_lastMsg, msgFormat );
+}
+
+void z3ResEx::setMessage( const char *msgFormat, const char *arg )
+{
+	sprintf_s( m_lastMsg, msgFormat, arg );
+}
+
+void z3ResEx::setMessage( const char *msgFormat, const unsigned int arg )
+{
+	sprintf_s( m_lastMsg, msgFormat, arg );
+}
+
 void z3ResEx::PrintUsage( ) const
 {
 	puts("Usage: z3ResEx.exe DIR -v|-x|-l");
@@ -43,7 +58,7 @@ bool z3ResEx::setFlags( const targs &args )
 	{
 		if( SetCurrentDirectoryA( args.getArgCStr(1) ) == 0 )
 		{
-			sprintf(m_lastMsg, "ERROR: Cannot set current path to \"%s\"\n", args.getArgCStr(1) );
+			setMessage( "ERROR: Cannot set current path to \"%s\"", args.getArgCStr(1) );
 			return false;
 		}
 
@@ -52,7 +67,7 @@ bool z3ResEx::setFlags( const targs &args )
 			PrintUsage();
 
 			// Also stop execution here (but successfully)
-			return true;
+			return false;
 		}
 
 		// Allow verbose toggle when not true by default
@@ -70,17 +85,18 @@ bool z3ResEx::setFlags( const targs &args )
 			m_doExtraction = false;
 		}
 	}
-
-	// Print current flags
+	else
 	{
-		if( m_doExtraction )
-			puts("[Enabled] Extracting");
+		// No arguments, but inform user of them!
+		puts("To see all options, use the --usage flag\n");
+	}
 
-		if( m_verboseMessages )
-			puts("[Enabled] Verbose messages");
+	if( m_verboseMessages )
+	{
+		// Print current flags
 
-		if( m_listContents )
-			puts("[Enabled] List filesystem");
+		if( m_doExtraction )	puts("[Enabled] Extracting");
+		if( m_listContents )	puts("[Enabled] Listing filesystem");
 	}
 
 	return true;
@@ -106,9 +122,9 @@ std::string z3ResEx::fsRename( char *strMrf, char *strName ) const
 	return name;
 }
 
-void z3ResEx::unpackStringEx( TMemoryStream &msf, char *&buf, const unsigned int len ) const
+void z3ResEx::unpackStringEx( TMemoryStream &msf, unsigned char *&buf, const unsigned int len ) const
 {
-	buf = new char[ len +1 ];
+	buf = new unsigned char[ len +1 ];
 	msf.Read( buf, len );
 	buf[len] = 0;
 
@@ -119,8 +135,8 @@ void z3ResEx::unpackStringEx( TMemoryStream &msf, char *&buf, const unsigned int
 	*/
 	if( m_fileindexVer == 1 )
 	{
-		const char encKey( buf[0] );	// First byte is the key
-		unsigned int i = 1;				// Second byte starts the data
+		const unsigned char encKey( buf[0] );	// First byte is the key
+		unsigned int i = 1;						// Second byte starts the data
 
 		while( i < len )
 		{
@@ -140,7 +156,7 @@ void z3ResEx::Run( )
 	// Check the fileindex exists
 	if( TFileSize( msfName ) == 0 )
 	{
-		sprintf(m_lastMsg, "ERROR: Unable to open file (%s)\n", msfName);
+		setMessage( "ERROR: Unable to open file (%s)", msfName );
 	}
 	else
 	{
@@ -149,11 +165,16 @@ void z3ResEx::Run( )
 		m_fileindexKey			= nullptr;
 		m_fileindexKeyLength	= 0;
 
-		// Brute-force the key (fileindex method 1)
+		//
+		// Brute-force the key (version 1)
+		//
+
 		unsigned int keyIndex( 0 );
 
+		// For all known keys
 		while( ( keyIndex < Z3_KEY_LIST_LENGTH ) && ( msf.Size() == 0 ) )
 		{
+			// Try to read the fileindex
 			if( fsReadMSF( msf, Z3_KEY_LIST[ keyIndex ], Z3_KEY_LENGTH, 0 ) )
 			{
 				m_fileindexKey			= Z3_KEY_LIST[ keyIndex ];
@@ -164,9 +185,14 @@ void z3ResEx::Run( )
 			++keyIndex;
 		}
 
-		// Continue to brute-force the key (second method)
+		// If key has not been found
 		if( m_fileindexKey == nullptr )
 		{
+			//
+			//  Continue to brute-force the key (version 2)
+			//
+
+			// Only one known key for this version
 			if( fsReadMSF( msf, Z3_KEY_GUNZ2_METHOD2, Z3_KEY_LENGTH_METHOD2, 1 ) )
 			{
 				m_fileindexKey			= Z3_KEY_GUNZ2_METHOD2;
@@ -175,17 +201,17 @@ void z3ResEx::Run( )
 			}
 		}
 
+		// If a valid key has been found and fileindex loaded
 		if( !( ( m_fileindexKey == nullptr ) && ( msf.Size() == 0 ) ) )
 		{
-			// The key has been found
+			// Attempt to parse it (to extract or list files)
 			msf.Seek( 0, bufo_start );
 			parseMsf( msf );
 		}
 		else
 		{
 			// No key found or incompatiable file (not checked)
-			sprintf(m_lastMsg, \
-				"ERROR: This file is using an updated key or unsupported method\n");
+			setMessage( "ERROR: This file is using an updated key or unsupported method" );
 		}
 
 		msf.Close();
@@ -308,14 +334,14 @@ bool z3ResEx::fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF )
 	if( !( z3Rle::decodeSize( pData, expectedSize, len ) ) )
 	{
 		dst.Close();
-		printf("ERROR: Problems decoding RLE buffer size\n");
+		//printf("ERROR: Problems decoding RLE buffer size\n");
 		return false;
 	}
 
 	if( isMSF && !( msfSizeFlag == expectedSize ) )
 	{
 		dst.Close();
-		printf("ERROR: Unexpected MSF buffer size\n");
+		//printf("ERROR: Unexpected MSF buffer size\n");
 		return false;
 	}
 
@@ -330,7 +356,7 @@ bool z3ResEx::fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF )
 		if( !( z3Rle::decodeInstruction( pData, len, pDataEnd, tmpBuffer, tmpOffset ) ) )
 		{
 			delete tmpBuffer;
-			printf("ERROR: Problems decoding RLE buffer\n");
+			//printf("ERROR: Problems decoding RLE buffer\n");
 
 			return false;
 		}
@@ -353,7 +379,7 @@ void z3ResEx::fsXor( FILEINDEX_ENTRY &info, TMemoryStream &src )
 void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 {
 	unsigned short strLen( 0 );
-	char *strBuffer( nullptr );
+	unsigned char *strBuffer( nullptr );
 
 	FILEINDEX_HEADER fiHead;
 
@@ -371,7 +397,7 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 		strLen = msf.ReadUShort();
 		unpackStringEx( msf, strBuffer, strLen );
 
-		vecMsfNames[i] = strBuffer;
+		vecMsfNames[i].assign( (char *)strBuffer );
 
 		delete strBuffer;
 	}
@@ -379,19 +405,35 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 	// Files are now listed (similar to before)
 	FILEINDEX_ENTRY2 fiItem;
 
-	while( msf.Position() < msf.Size() )
+	unsigned int items( 0 ), errors( 0 );
+
+	/*
+
+	// Broken.
+
+	while( ( msf.Position() < msf.Size() ) && ( errors < MAX_ERRORS ) )
 	{
 		msf.Read( &fiItem, sizeof( FILEINDEX_ENTRY2 ) );
 
 		strLen = msf.ReadUShort();
 		unpackStringEx( msf, strBuffer, strLen );
 		
-		// TODO: Extract file data
-
-		printf( "Found %s\n", strBuffer );
+		if( m_listContents )
+		{
+			printf( "%s (%u bytes)\n", strBuffer, fiItem.size );
+		}
+		else
+		{
+			// TODO: Extract file data
+		}
 
 		delete strBuffer;
+
+		++items;
 	}
+	*/
+
+	printf( "Processed %u items (%u issues)\n\n", items, errors );
 }
 
 void z3ResEx::fsCreatePath( std::string &strPath ) const
@@ -411,7 +453,7 @@ bool z3ResEx::extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *st
 
 	if( !( mrf.isOpen() ) )
 	{
-		sprintf(m_lastMsg, "ERROR: Unable to open file (%s)\n", strMrf );
+		setMessage( "ERROR: Unable to open file (%s)", strMrf );
 		return false;
 	}
 
@@ -484,7 +526,8 @@ bool z3ResEx::extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *st
 			TMemoryStream fdata_raw;
 			if( fsRle( fdata_dec, fdata_raw ) )
 			{
-				if( m_doExtraction ) fdata_raw.SaveToFile( fname.c_str() );
+				if( m_doExtraction )
+					fdata_raw.SaveToFile( fname.c_str() );
 
 				printf(" ..done!\n");
 			}
@@ -528,12 +571,10 @@ void z3ResEx::parseMsf( TMemoryStream &msf )
 	{
 		case 0 :
 		{
-			#define MAX_ERRORS 50
-
 			unsigned char method( 0 );
 			FILEINDEX_ENTRY info;
-			char *strMRFN( nullptr );
-			char *strName( nullptr );
+			unsigned char *strMRFN( nullptr );
+			unsigned char *strName( nullptr );
 
 			unsigned int items( 0 ), errors( 0 );
 
@@ -545,14 +586,23 @@ void z3ResEx::parseMsf( TMemoryStream &msf )
 				unpackStringEx( msf, strMRFN, info.lenMRFN );
 				unpackStringEx( msf, strName, info.lenName );
 
-				if( !( extractItem( info, method, strMRFN, strName ) ) )
-					++errors;
+				if( m_listContents )
+				{
+					printf( "%s (%u bytes)\n", strName, info.size );
+				}
+				else
+				{
+					if( !( extractItem( info, method, (char *)strMRFN, (char *)strName ) ) )
+						++errors;
+				}
 
 				++items;
 
 				delete strMRFN;
 				delete strName;
 			}
+
+			printf( "Processed %u items (%u issues)\n\n", items, errors );
 
 			break;
 		}

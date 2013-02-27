@@ -12,63 +12,73 @@
 #include <string>
 #include <vector>
 
-// Import TStream class
+// TStream class
 #include "mbuffer.h"
 #include "fbuffer.h"
 
-// Import fileindex definitions and encryption keys
+// Fileindex structures
 #include "z3MSF.h"
 
-// Import data manipulation methods
-
-// Included from the CryptoLib project
+// CryptoLib project headers
 #include "filters.h"
 #include "osrng.h"
 #include "eccrypto.h"
 
+// Decryption methods
 #include "z3Rle.h"
 #include "z3Xor.h"
+
+// Parameter handling
+#include "targs.h"
 
 using namespace CryptoPP;
 using std::string;
 using std::vector;
-
-// Import argument handler
-#include "targs.h"
 
 #if defined( _DEBUG )
 #define VERBOSE_BY_DEFAULT
 #endif
 
 #define z3ResExMsgLen		1024
+#define MAX_ERRORS			50
 
 class z3ResEx
 {
-	static char msfName[];
+	static char		msfName[];
+	
+	char			m_lastMsg[ z3ResExMsgLen ];
+	
+	unsigned char	*m_fileindexKey;
+	unsigned int	m_fileindexKeyLength;
+	
+	int				m_fileindexVer;
+	
+	bool			m_doExtraction;
+	bool			m_listContents;
+	bool			m_verboseMessages;
 
-	char m_lastMsg[1024];
+	// Setting errors
+	void setMessage( const char * );
+	void setMessage( const char *, const char * );
+	void setMessage( const char *, const unsigned int );
 
-	unsigned char *m_fileindexKey;
-	unsigned int m_fileindexKeyLength;
-
-	int m_fileindexVer;
-
-	bool m_doExtraction;
-	bool m_listContents;
-	bool m_verboseMessages;
-
+	// Misc functions
 	std::string fsRename( char *, char * ) const;
-	void unpackStringEx( TMemoryStream &, char *&, const unsigned int ) const;
+	void unpackStringEx( TMemoryStream &, unsigned char *&, const unsigned int ) const;
 	void fsCreatePath( std::string &strPath ) const;
 
+	// Extraction functions
 	bool extractItem( FILEINDEX_ENTRY &, unsigned char, char *, char * );
 
+	// Helper functions
 	bool z3Decrypt( TMemoryStream &, TMemoryStream &, unsigned char *, unsigned int );
 	bool fsRle( TMemoryStream &, TMemoryStream &, bool isMSF = false );
 	void fsXor( FILEINDEX_ENTRY &, TMemoryStream & );
 
+	// Fileindex loading function
 	bool fsReadMSF( TMemoryStream &, unsigned char *, unsigned int, int );
 
+	// Fileindex parsing functions
 	void parseMsf( TMemoryStream & );
 	void parseMsfMethod2( TMemoryStream & );
 	

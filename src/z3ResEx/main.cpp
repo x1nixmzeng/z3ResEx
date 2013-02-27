@@ -20,14 +20,7 @@ int main( int argc, char **argv )
 	puts( "Last updated " __DATE__ "\n" );
 
 	// Push commandline arguments
-	if( !( app.setFlags( params ) ) )
-	{
-		app.PrintUsage();
-
-		// Invalid usage error
-		puts( app.lastMessage( ) );
-	}
-	else
+	if( app.setFlags( params ) )
 	{
 		// Try running
 		app.Run();
