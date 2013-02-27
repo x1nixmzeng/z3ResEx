@@ -7,8 +7,8 @@
 
 	x1nixmzeng (August 2012)
 */
-#ifndef _H_MEMBUFFER_
-#define _H_MEMBUFFER_
+#ifndef MEMBUFFER_H
+#define MEMBUFFER_H
 
 #define MEMBUFFER_ALLOW_FILES
 

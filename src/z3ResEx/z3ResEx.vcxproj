@@ -74,16 +74,22 @@
     <ClCompile Include="fbuffer.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="mbuffer.cpp" />
+    <ClCompile Include="targs.cpp" />
     <ClCompile Include="xbuffer.cpp" />
+    <ClCompile Include="z3MSF.cpp" />
+    <ClCompile Include="z3ResEx.cpp" />
+    <ClCompile Include="z3Rle.cpp" />
+    <ClCompile Include="z3Xor.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fbuffer.h" />
     <ClInclude Include="keys.h" />
     <ClInclude Include="mbuffer.h" />
-    <ClInclude Include="tables.h" />
+    <ClInclude Include="z3RleTable.inl" />
+    <ClInclude Include="targs.h" />
     <ClInclude Include="xbuffer.h" />
-    <ClInclude Include="methods.h" />
     <ClInclude Include="z3MSF.h" />
+    <ClInclude Include="z3ResEx.h" />
     <ClInclude Include="z3Rle.h" />
     <ClInclude Include="z3Xor.h" />
   </ItemGroup>

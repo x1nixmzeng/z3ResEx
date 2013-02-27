@@ -4,8 +4,8 @@
 	x1nixmzeng (August 2012)
 */
 
-#ifndef _H_XBUFFER_
-#define _H_XBUFFER_
+#ifndef XBUFFER_H
+#define XBUFFER_H
 
 enum buffer_origin
 {

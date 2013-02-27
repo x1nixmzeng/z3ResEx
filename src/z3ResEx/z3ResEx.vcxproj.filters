@@ -33,11 +33,23 @@
     <ClCompile Include="fbuffer.cpp">
       <Filter>Source Files\TStream</Filter>
     </ClCompile>
+    <ClCompile Include="targs.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="z3Rle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="z3Xor.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="z3ResEx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="z3MSF.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="tables.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="keys.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -59,8 +71,14 @@
     <ClInclude Include="xbuffer.h">
       <Filter>Header Files\TStream</Filter>
     </ClInclude>
-    <ClInclude Include="methods.h">
+    <ClInclude Include="targs.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="z3ResEx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="z3RleTable.inl">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -5,8 +5,8 @@
 	x1nixmzeng (August 2012)
 */
 
-#ifndef _H_FBUFFER_
-#define _H_FBUFFER_
+#ifndef FBUFFER_H
+#define FBUFFER_H
 
 #include <stdio.h>
 

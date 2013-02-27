@@ -3,6 +3,10 @@ z3ResEx
 
 ## History
 
+Feb 2013
+ + Updated to recognize new filesystem
+ + Project goes through an internal rewrite
+
 Sep 2012
  + **z3RexEx** is created
 
