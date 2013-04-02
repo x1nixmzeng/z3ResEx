@@ -54,7 +54,7 @@ void z3ResEx::PrintUsage( ) const
 
 bool z3ResEx::setFlags( const targs &args )
 {
-	if( args.count() >= 1 )
+	if( args.count() > 1 )
 	{
 		if( args.hasArg("--usage") )
 		{
