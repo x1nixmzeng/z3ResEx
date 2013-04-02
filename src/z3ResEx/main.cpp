@@ -24,8 +24,9 @@ int main( int argc, char **argv )
 	{
 		// Try running
 		app.Run();
-		puts( app.lastMessage( ) );
 	}
+
+	puts( app.lastMessage( ) );
 
 	return 0;
 }

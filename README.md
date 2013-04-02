@@ -1,4 +1,4 @@
-﻿z3ResEx
+﻿﻿z3ResEx
 =======
 
 Extracts the filesystem from **RaiderZ** and **GunZ: The Second Duel** clients.
@@ -10,25 +10,36 @@ Latest build: [z3ResEx.exe][latest-build]
 
 ## Usage
 
-    z3ResEx.exe [client_path] [-v|l]
+    z3ResEx.exe [client_path] [-v|-x|-l]
 
 To begin immediate extraction from the current directory, run from the command line without any arguments:
 
     z3ResEx.exe
 
-To run without extracting any file data:
+To run with verbose output:
 
     z3ResEx.exe . -v
+    z3ResEx.exe . --verbose
+
+To run without extracting any file data: 
+
+    z3ResEx.exe . -x
+    z3ResEx.exe . --no-extraction
 
 To list all files in the filesystem:
 
     z3ResEx.exe . -l
+    z3ResEx.exe . --list-filesystem
 
 ### Advanced Usage
 
-Save all the filenames from the `Sound` archives to file:
+Create a filelist named `filelist.txt` from a RaiderZ filesystem:
 
-    z3ResEx.exe "C:\Perfect World Entertainment\RaiderZ" -l |find "datadump/Data/Sound" > sounds.txt
+    z3ResEx.exe "C:\Games\RaiderZ" -l > filelist.txt
+
+List all models from a GunZ2 filesystem:
+
+    z3ResEx.exe "C:\NetmarbleGunZ" -l | find ".elu "
 
 
 ## Compiling

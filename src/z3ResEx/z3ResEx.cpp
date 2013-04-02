@@ -54,19 +54,19 @@ void z3ResEx::PrintUsage( ) const
 
 bool z3ResEx::setFlags( const targs &args )
 {
-	if( args.count() > 1 )
+	if( args.count() >= 1 )
 	{
-		if( SetCurrentDirectoryA( args.getArgCStr(1) ) == 0 )
-		{
-			setMessage( "ERROR: Cannot set current path to \"%s\"", args.getArgCStr(1) );
-			return false;
-		}
-
 		if( args.hasArg("--usage") )
 		{
 			PrintUsage();
 
 			// Also stop execution here (but successfully)
+			return false;
+		}
+
+		if( SetCurrentDirectoryA( args.getArgCStr(1) ) == 0 )
+		{
+			setMessage( "ERROR: Cannot set current path to \"%s\"", args.getArgCStr(1) );
 			return false;
 		}
 
@@ -208,12 +208,19 @@ void z3ResEx::Run( )
 			//  Continue to brute-force the key (version 2)
 			//
 
-			// Only one known key for this version
-			if( fsReadMSF( msf, Z3_KEY_GUNZ2_METHOD2, Z3_KEY_LENGTH_METHOD2, 1 ) )
+			keyIndex = 0;
+			// For all known keys
+			while( ( keyIndex < Z3_KEY_LIST_METHOD2_LENGTH ) && ( msf.Size() == 0 ) )
 			{
-				m_fileindexKey			= Z3_KEY_GUNZ2_METHOD2;
-				m_fileindexKeyLength	= Z3_KEY_LENGTH_METHOD2;
-				m_fileindexVer			= 1;
+				// Try to read the fileindex
+				if( fsReadMSF( msf, Z3_KEY_LIST_METHOD2[ keyIndex ], Z3_KEY_LENGTH_METHOD2, 1 ) )
+				{
+					m_fileindexKey			= Z3_KEY_LIST_METHOD2[ keyIndex ];
+					m_fileindexKeyLength	= Z3_KEY_LENGTH_METHOD2;
+					m_fileindexVer			= 1;
+				}
+
+				++keyIndex;
 			}
 		}
 
