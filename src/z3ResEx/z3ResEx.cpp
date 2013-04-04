@@ -188,14 +188,17 @@ void z3ResEx::Run( )
 		unsigned int keyIndex( 0 );
 
 		// For all known keys
-		while( ( keyIndex < Z3_KEY_LIST_LENGTH ) && ( msf.Size() == 0 ) )
+		while( ( keyIndex < keyList1Count ) && ( msf.Size() == 0 ) )
 		{
 			// Try to read the fileindex
-			if( fsReadMSF( msf, Z3_KEY_LIST[ keyIndex ], Z3_KEY_LENGTH, 0 ) )
+			if( fsReadMSF( msf, keyList1[ keyIndex ].Data, KeyLength1, 0 ) )
 			{
-				m_fileindexKey			= Z3_KEY_LIST[ keyIndex ];
-				m_fileindexKeyLength	= Z3_KEY_LENGTH;
+				m_fileindexKey			= keyList1[ keyIndex ].Data;
+				m_fileindexKeyLength	= KeyLength1;
 				m_fileindexVer			= 0;
+
+				if( m_verboseMessages )
+					printf("Found key for %s!\n", keyList1[ keyIndex ].Desc );
 			}
 
 			++keyIndex;
@@ -210,14 +213,17 @@ void z3ResEx::Run( )
 
 			keyIndex = 0;
 			// For all known keys
-			while( ( keyIndex < Z3_KEY_LIST_METHOD2_LENGTH ) && ( msf.Size() == 0 ) )
+			while( ( keyIndex < keyList2Count ) && ( msf.Size() == 0 ) )
 			{
 				// Try to read the fileindex
-				if( fsReadMSF( msf, Z3_KEY_LIST_METHOD2[ keyIndex ], Z3_KEY_LENGTH_METHOD2, 1 ) )
+				if( fsReadMSF( msf, keyList2[ keyIndex ].Data, KeyLength2, 1 ) )
 				{
-					m_fileindexKey			= Z3_KEY_LIST_METHOD2[ keyIndex ];
-					m_fileindexKeyLength	= Z3_KEY_LENGTH_METHOD2;
+					m_fileindexKey			= keyList2[ keyIndex ].Data;
+					m_fileindexKeyLength	= KeyLength2;
 					m_fileindexVer			= 1;
+
+					if( m_verboseMessages )
+						printf("Found key for %s!\n", keyList2[ keyIndex ].Desc );
 				}
 
 				++keyIndex;
