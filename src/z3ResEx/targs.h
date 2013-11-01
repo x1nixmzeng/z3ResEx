@@ -24,9 +24,9 @@ typedef targVector::const_iterator	targVectorCIt;
 class targs
 {
 private:
-	targVector m_args;
+	targVector		m_argVector;
 
-	targVectorCIt getArg( const string& ) const;
+	targVectorCIt	GetItemByName( const string &sItemName ) const;
 
 public:
 	// Constructor
@@ -34,10 +34,10 @@ public:
 	~targs();
 
 	// Accessors
-	unsigned int count( ) const;
-	bool hasArg( const string& ) const;
-	const char *getArgCStr( unsigned int ) const;
-	
+	unsigned int	Count( ) const;
+	bool			HasItem( const string &sItemName ) const;
+	const char *	GetItemValue( const string &sItemName ) const;
+	const char *	GetItemValue( unsigned int uItemIndex ) const;
 };
 
 #endif

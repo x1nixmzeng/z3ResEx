@@ -1,35 +1,53 @@
 #include "targs.h"
 
-targVectorCIt targs::getArg( const string &str ) const
+targVectorCIt targs::GetItemByName( const string &sItemName ) const
 {
-	return std::find( m_args.begin(), m_args.end(), str );
-}
-
-bool targs::hasArg( const string &str ) const
-{
-	return( !( getArg( str ) == m_args.end() ) );
+	return std::find( m_argVector.begin(), m_argVector.end(), sItemName );
 }
 
 targs::targs( int argc, char **argv )
 {
 	for( int i( 0 ); i < argc; ++i )
-		m_args.push_back( argv[ i ] );
+		m_argVector.push_back( argv[ i ] );
 }
 
 targs::~targs( )
 {
-	m_args.clear();
+	m_argVector.clear();
 }
 
-const char *targs::getArgCStr( unsigned int index ) const
+unsigned int targs::Count( ) const
 {
-	if( index >= m_args.size() )
-		return NULL;
-
-	return m_args.at( index ).c_str();
+	return m_argVector.size();
 }
 
-unsigned int targs::count( ) const
+bool targs::HasItem( const string &sItemName ) const
 {
-	return m_args.size();
+	return( !( GetItemByName( sItemName ) == m_argVector.end() ) );
+}
+
+const char *targs::GetItemValue( const string &sItemName ) const
+{
+	if( HasItem( sItemName ) )
+	{
+		targVectorCIt argItem = GetItemByName( sItemName );
+		argItem++;
+
+		if( !( argItem == m_argVector.end() ) )
+		{
+			return argItem->c_str();
+		}
+	}
+
+	return NULL;
+}
+
+const char *targs::GetItemValue( unsigned int uItemIndex ) const
+{
+	if( uItemIndex < Count() )
+	{
+		return m_argVector.at(uItemIndex).c_str();
+	}
+
+	return NULL;
 }

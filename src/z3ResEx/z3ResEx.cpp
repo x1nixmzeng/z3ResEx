@@ -1,6 +1,7 @@
 #include "z3ResEx.h"
 #include "keys.h"
 
+#define MAX_STRING_SIZE		2048
 char z3ResEx::msfName[] = "fileindex.msf";
 
 z3ResEx::z3ResEx( )
@@ -16,6 +17,7 @@ z3ResEx::z3ResEx( )
 #endif
 {
 	*m_lastMsg = 0;
+	m_folderCriteria = "";
 }
 
 void z3ResEx::setMessage( const char *msgFormat )
@@ -41,6 +43,7 @@ void z3ResEx::PrintUsage( ) const
 		puts(" -v (--verbose)         * Verbose log messages");
 		puts(" -x (--no-extraction)   * Do not extract files");
 		puts(" -l (--list-filesystem) * Show list of filenames (overrides -x)");
+		puts(" -c <NAME> (--criteria) * Only handle files with this string");
 		puts("                       (* optional argument)");
 	}
 	puts("");
@@ -48,15 +51,16 @@ void z3ResEx::PrintUsage( ) const
 		puts("z3ResEx.exe             Extract from current directory)");
 		puts("z3ResEx.exe C:\\RaiderZ  Extract from C:\\RaiderZ");
 		puts("z3ResEx.exe . -l        List filesystem in current directory");
+		puts("z3ResEx.exe . -c \".lua\"  Extract only lua files");
 	}
 	puts("");
 }
 
 bool z3ResEx::setFlags( const targs &args )
 {
-	if( args.count() > 1 )
+	if( args.Count() > 1 )
 	{
-		if( args.hasArg("--usage") )
+		if( args.HasItem("--usage") )
 		{
 			PrintUsage();
 
@@ -64,25 +68,54 @@ bool z3ResEx::setFlags( const targs &args )
 			return false;
 		}
 
-		if( SetCurrentDirectoryA( args.getArgCStr(1) ) == 0 )
+		if( SetCurrentDirectoryA( args.GetItemValue(1) ) == 0 )
 		{
-			setMessage( "ERROR: Cannot set current path to \"%s\"", args.getArgCStr(1) );
+			setMessage( "ERROR: Cannot set current path to \"%s\"", args.GetItemValue(1) );
 			return false;
 		}
 
 		// Allow verbose toggle when not true by default
 		if( !( m_verboseMessages ) )
-			m_verboseMessages = ( args.hasArg("-v") || args.hasArg("--verbose") );
+			m_verboseMessages = ( args.HasItem("-v") || args.HasItem("--verbose") );
 
 		// Disable file extraction
-		if( args.hasArg("-x") || args.hasArg("--no-extraction") )
+		if( args.HasItem("-x") || args.HasItem("--no-extraction") )
 			m_doExtraction = false;
 
 		// List the filesystem contents (no extraction)
-		if( args.hasArg("-l") || args.hasArg("--list-filesystem") )
+		if( args.HasItem("-l") || args.HasItem("--list-filesystem") )
 		{
 			m_listContents = true;
 			m_doExtraction = false;
+		}
+
+		// Specify which folder to extract
+		if( args.HasItem("-c") || args.HasItem("--criteria") )
+		{
+			bool bHasValue = false;
+
+			const char *strVal1 = args.GetItemValue("-c");
+			if( strVal1 )
+			{
+				m_folderCriteria = strVal1;
+				bHasValue = true;
+			}
+			else
+			{
+				const char *strVal2 = args.GetItemValue("--criteria");
+
+				if( strVal2 )
+				{
+					m_folderCriteria = strVal2;
+					bHasValue = true;
+				}
+			}
+
+			if( !bHasValue )
+			{
+				setMessage( "ERROR: No criteria was specified" );
+				return false;
+			}
 		}
 	}
 	else
@@ -95,9 +128,19 @@ bool z3ResEx::setFlags( const targs &args )
 	{
 		// Print current flags
 
-		if( m_doExtraction )	puts("[Enabled] Extracting");
-		if( m_listContents )	puts("[Enabled] Listing filesystem");
+		if( m_doExtraction )	puts("LOG: Extracting files");
+		if( m_listContents )	puts("LOG: Listing filesystem");
+		if( !m_folderCriteria.empty( ) )
+		{
+			string tmp;
+			tmp = "LOG: Search criteria set to '";
+			tmp += m_folderCriteria.c_str();
+			tmp += "'";
+			puts( tmp.c_str() );
+		}
 	}
+
+	std::transform(m_folderCriteria.begin(), m_folderCriteria.end(), m_folderCriteria.begin(), ::toupper);
 
 	return true;
 }
@@ -140,7 +183,6 @@ std::string z3ResEx::fsRename( const char *strMrf, const char *strName ) const
 
 void z3ResEx::unpackStringEx( TMemoryStream &msf, unsigned char *&buf, const unsigned int len ) const
 {
-	buf = new unsigned char[ len +1 ];
 	msf.Read( buf, len );
 	buf[len] = 0;
 
@@ -420,6 +462,8 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 
 	unsigned short mrfIndexLen( 0 );
 
+	strBuffer = new unsigned char[ MAX_STRING_SIZE ];
+
 	// Folders are now in a table at the top of the file
 	msf.Read( &mrfIndexLen, sizeof( unsigned short ) );
 
@@ -442,8 +486,6 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 		//vecMsf[i].second = new TFileStream( strBuffer );
 
 		vecMsf[i].assign( (char *)strBuffer );
-
-		delete strBuffer;
 	}
 
 	// Files are now listed (similar to before)
@@ -453,6 +495,9 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 
 	//msf.SaveToFile("debugFilesys.dat");
 
+	bool bMatchesCriteria = true;
+	string tmpFilename;
+
 	while( ( msf.Position() < msf.Size() ) && ( errors < MAX_ERRORS ) )
 	{
 		msf.Read( &fiItem, sizeof( FILEINDEX_ENTRY2 ) );
@@ -460,21 +505,30 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 		strLen = msf.ReadUShort();
 		unpackStringEx( msf, strBuffer, strLen );
 		
-		if( m_listContents )
+		if( !m_folderCriteria.empty() )
 		{
-			printf( "%s (%u bytes)\n", strBuffer, fiItem.size );
-		}
-		else
-		{
-			if( !( extractItem2( fiItem, vecMsf[ fiItem.mrfIndex ], (char *)strBuffer ) ) )
-				++errors;
+			tmpFilename = (char*)strBuffer;
+			std::transform(tmpFilename.begin(), tmpFilename.end(), tmpFilename.begin(), ::toupper);
+			bMatchesCriteria = !( tmpFilename.find( m_folderCriteria ) == string::npos );
 		}
 
-		delete strBuffer;
+		if( bMatchesCriteria )
+		{
+			if( m_listContents )
+			{
+				printf( "%s (%u bytes)\n", strBuffer, fiItem.size );
+			}
+			else
+			{
+				if( !( extractItem2( fiItem, vecMsf[ fiItem.mrfIndex ], (char *)strBuffer ) ) )
+					++errors;
+			}
+		}
 
 		++items;
 	}
 
+	delete strBuffer;
 	vecMsf.clear();
 
 	printf( "Processed %u items (%u issues)\n\n", items, errors );

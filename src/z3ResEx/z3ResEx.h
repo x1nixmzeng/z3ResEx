@@ -57,6 +57,8 @@ class z3ResEx
 	bool			m_listContents;
 	bool			m_verboseMessages;
 
+	string			m_folderCriteria;
+
 	// Setting errors
 	void setMessage( const char * );
 	void setMessage( const char *, const char * );

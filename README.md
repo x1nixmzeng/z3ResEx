@@ -10,7 +10,7 @@ Latest build: [z3ResEx.exe][latest-build]
 
 ## Usage
 
-    z3ResEx.exe [client_path] [-v|-x|-l]
+    z3ResEx.exe [client_path] [-v|-x|-l|-c] [criteria]
 
 To begin immediate extraction from the current directory, run from the command line without any arguments:
 
@@ -31,7 +31,17 @@ To list all files in the filesystem:
     z3ResEx.exe . -l
     z3ResEx.exe . --list-filesystem
 
+To limit which files are used:
+
+    z3ResEx . -c ".lua"
+    z3ResEx . --criteria ".lua"
+
+
 ### Advanced Usage
+
+Extract files from the `Interface` folder
+
+    z3ResEx.exe . -c "Interface\\"
 
 Create a filelist named `filelist.txt` from a RaiderZ filesystem:
 
@@ -39,7 +49,7 @@ Create a filelist named `filelist.txt` from a RaiderZ filesystem:
 
 List all models from a GunZ2 filesystem:
 
-    z3ResEx.exe "C:\NetmarbleGunZ" -l | find ".elu "
+	z3ResEx.exe "C:\NetmarbleGunZ" -l -c ".elu"
 
 
 ## Compiling
