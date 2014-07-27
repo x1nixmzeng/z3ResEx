@@ -181,9 +181,9 @@ std::string z3ResEx::fsRename( const char *strMrf, const char *strName ) const
 	return name;
 }
 
-void z3ResEx::unpackStringEx( TMemoryStream &msf, unsigned char *&buf, const unsigned int len ) const
+void z3ResEx::unpackStringEx( TMemoryStream &msf, vector<unsigned char>& buf, const unsigned int len ) const
 {
-	msf.Read( buf, len );
+	msf.Read( &buf[0], len );
 	buf[len] = 0;
 
 	/*
@@ -380,21 +380,16 @@ bool z3ResEx::z3Decrypt
 	AutoSeededRandomPool rng;
 	ECIES<ECP>::Decryptor ellipticalEnc( keyStr );
 	
-	unsigned char *tmpBuffer( new unsigned char[ src.Size() ] );
-
-	DecodingResult dr = ellipticalEnc.Decrypt( rng, src.Data(), src.Size(), tmpBuffer );
+  vector<unsigned char> tmpBuffer(src.Size());
+	DecodingResult dr = ellipticalEnc.Decrypt( rng, src.Data(), src.Size(), &tmpBuffer[0] );
 	
-	if( !( dr.isValidCoding ) || ( dr.messageLength == 0 ) )
+	if( dr.isValidCoding && dr.messageLength > 0 )
 	{
-		delete tmpBuffer;
-		return false;
+    dst.Write(&tmpBuffer[0], dr.messageLength);
+    return true;
 	}
 
-	dst.Write( tmpBuffer, dr.messageLength );
-
-	delete tmpBuffer;
-
-	return true;
+	return false;
 }
 
 bool z3ResEx::fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF )
@@ -427,14 +422,13 @@ bool z3ResEx::fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF )
 	// Skip the length of the expected size
 	pData += len;
 
-	unsigned char *tmpBuffer( new unsigned char[ expectedSize ] );
+  vector<unsigned char> tmpBuffer(expectedSize);
 	unsigned int tmpOffset( 0 );
 
 	while( tmpOffset < expectedSize )
 	{
-		if( !( z3Rle::decodeInstruction( pData, len, pDataEnd, tmpBuffer, tmpOffset ) ) )
+    if (!(z3Rle::decodeInstruction(pData, len, pDataEnd, &tmpBuffer[0], tmpOffset)))
 		{
-			delete tmpBuffer;
 			//printf("ERROR: Problems decoding RLE buffer\n");
 
 			return false;
@@ -443,9 +437,7 @@ bool z3ResEx::fsRle( TMemoryStream &src, TMemoryStream &dst, bool isMSF )
 		pData += len;
 	}
 
-	dst.Write( tmpBuffer, expectedSize );
-
-	delete tmpBuffer;
+  dst.Write(&tmpBuffer[0], expectedSize);
 
 	return true;
 }
@@ -458,22 +450,22 @@ void z3ResEx::fsXor( TMemoryStream &src, unsigned int key ) const
 void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 {
 	unsigned short strLen( 0 );
-	unsigned char *strBuffer( nullptr );
-
 	unsigned short mrfIndexLen( 0 );
-
-	strBuffer = new unsigned char[ MAX_STRING_SIZE ];
 
 	// Folders are now in a table at the top of the file
 	msf.Read( &mrfIndexLen, sizeof( unsigned short ) );
 
-	// List of filenames
-	//typedef std::pair<string, TFileStream* > mrfItem;
-	typedef vector<string > mrfItemList;
+  if (mrfIndexLen == 0)
+  {
+    // There are no folders in the filesystem
+    return;
+  }
 
-	mrfItemList vecMsf;
-	vecMsf.resize( mrfIndexLen );
-			
+	// List of filenames
+  vector<string> vecMsf(mrfIndexLen);
+
+  vector<unsigned char> strBuffer(MAX_STRING_SIZE);
+
 	// MRF filenames are now packed in a list
 	for( unsigned short i( 0 ); i != mrfIndexLen; ++i )
 	{
@@ -485,7 +477,7 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 		// Cached file opening (and a pointer so we can call the constructor)
 		//vecMsf[i].second = new TFileStream( strBuffer );
 
-		vecMsf[i].assign( (char *)strBuffer );
+    vecMsf[i] = string(strBuffer.begin(), strBuffer.end());
 	}
 
 	// Files are now listed (similar to before)
@@ -507,7 +499,7 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 		
 		if( !m_folderCriteria.empty() )
 		{
-			tmpFilename = (char*)strBuffer;
+      tmpFilename = string(strBuffer.begin(), strBuffer.end());
 			std::transform(tmpFilename.begin(), tmpFilename.end(), tmpFilename.begin(), ::toupper);
 			bMatchesCriteria = !( tmpFilename.find( m_folderCriteria ) == string::npos );
 		}
@@ -516,11 +508,11 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 		{
 			if( m_listContents )
 			{
-				printf( "%s (%u bytes)\n", strBuffer, fiItem.size );
+				printf( "%s (%u bytes)\n", &strBuffer[0], fiItem.size );
 			}
 			else
 			{
-				if( !( extractItem2( fiItem, vecMsf[ fiItem.mrfIndex ], (char *)strBuffer ) ) )
+				if( !( extractItem2( fiItem, vecMsf[ fiItem.mrfIndex ], reinterpret_cast<const char*>(&strBuffer[0]) ) ) )
 					++errors;
 			}
 		}
@@ -528,7 +520,6 @@ void z3ResEx::parseMsfMethod2( TMemoryStream &msf )
 		++items;
 	}
 
-	delete strBuffer;
 	vecMsf.clear();
 
 	printf( "Processed %u items (%u issues)\n\n", items, errors );
@@ -546,7 +537,7 @@ void z3ResEx::fsCreatePath( std::string &strPath ) const
 }
 
 
-bool z3ResEx::extractItem2( FILEINDEX_ENTRY2 &info, const string &strMrf, char *strName )
+bool z3ResEx::extractItem2( FILEINDEX_ENTRY2 &info, const string &strMrf, const char *strName )
 {
 	TFileStream mrf( strMrf.c_str() );
 
@@ -567,17 +558,17 @@ bool z3ResEx::extractItem2( FILEINDEX_ENTRY2 &info, const string &strMrf, char *
 		return true;
 	}
 
-	unsigned char *buf( new unsigned char[ info.zsize ] );
+  vector<unsigned char> buf(info.size);
 
 	// Load MRF data into buffer
 	mrf.Seek( info.offset, bufo_start );
-	mrf.Read( buf, info.zsize );
+	mrf.Read( &buf[0], info.zsize );
 	mrf.Close();
 
 	// Copy into TStream
 	TMemoryStream fdata;
-	fdata.LoadFromBuffer( buf, info.zsize );
-	delete buf;
+	fdata.LoadFromBuffer( &buf[0], info.zsize );
+  buf.clear();
 
 	printf(	"Saving %s.. ",	fname.substr( fname.rfind('/') +1 ).c_str() );
 
@@ -659,7 +650,7 @@ bool z3ResEx::extractItem2( FILEINDEX_ENTRY2 &info, const string &strMrf, char *
 
 
 
-bool z3ResEx::extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *strMrf, char *strName )
+bool z3ResEx::extractItem( FILEINDEX_ENTRY &info, unsigned char method, const char *strMrf, const char *strName )
 {
 	TFileStream mrf( strMrf );
 
@@ -680,17 +671,17 @@ bool z3ResEx::extractItem( FILEINDEX_ENTRY &info, unsigned char method, char *st
 		return true;
 	}
 
-	unsigned char *buf( new unsigned char[ info.zsize ] );
+	vector<unsigned char> buf( info.zsize );
 
 	// Load MRF data into buffer
 	mrf.Seek( info.offset, bufo_start );
-	mrf.Read( buf, info.zsize );
+	mrf.Read( &buf[0], info.zsize );
 	mrf.Close();
 
 	// Copy into TStream
 	TMemoryStream fdata;
-	fdata.LoadFromBuffer( buf, info.zsize );
-	delete buf;
+	fdata.LoadFromBuffer( &buf[0], info.zsize );
+  buf.clear();
 
 	printf
 	(	
@@ -785,8 +776,9 @@ void z3ResEx::parseMsf( TMemoryStream &msf )
 		{
 			unsigned char method( 0 );
 			FILEINDEX_ENTRY info;
-			unsigned char *strMRFN( nullptr );
-			unsigned char *strName( nullptr );
+
+      vector<unsigned char> strMRFN(MAX_STRING_SIZE);
+      vector<unsigned char> strName(MAX_STRING_SIZE);
 
 			unsigned int items( 0 ), errors( 0 );
 
@@ -795,23 +787,20 @@ void z3ResEx::parseMsf( TMemoryStream &msf )
 				method = msf.ReadByte();
 				msf.Read( &info, sizeof( FILEINDEX_ENTRY ) );
 
-				unpackStringEx( msf, strMRFN, info.lenMRFN );
-				unpackStringEx( msf, strName, info.lenName );
+        unpackStringEx(msf, strMRFN, info.lenMRFN);
+        unpackStringEx(msf, strName, info.lenName);
 
 				if( m_listContents )
 				{
-					printf( "%s (%u bytes)\n", strName, info.size );
+					printf( "%s (%u bytes)\n", &strName[0], info.size );
 				}
 				else
 				{
-					if( !( extractItem( info, method, (char *)strMRFN, (char *)strName ) ) )
+					if( !( extractItem( info, method, reinterpret_cast<const char*>(&strMRFN[0]), reinterpret_cast<const char*>(&strName[0]) ) ) )
 						++errors;
 				}
 
 				++items;
-
-				delete strMRFN;
-				delete strName;
 			}
 
 			printf( "Processed %u items (%u issues)\n\n", items, errors );

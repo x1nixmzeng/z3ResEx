@@ -6,6 +6,8 @@
 */
 #include "mbuffer.h"
 
+#include <vector>
+
 mbuffer::mbuffer( )
 {
 	buff = nullptr;
@@ -148,7 +150,6 @@ bool mbuffer::LoadFromBuffer( void *data, unsigned int count )
 */
 bool mbuffer::LoadFromFile( const char *filename )
 {
-	char *fileBuffer;
 	bool result( false );
 	TFileStream fileInfo( filename );
 
@@ -156,13 +157,10 @@ bool mbuffer::LoadFromFile( const char *filename )
 	{
 		unsigned int fileSize( fileInfo.Size() );
 
-		if( fileBuffer = new char[ fileSize ] )
-		{
-			fileInfo.Read( fileBuffer, fileSize );
-			result = DataWrite( fileBuffer, fileSize );
-
-			delete fileBuffer;
-		}
+    std::vector<char> fileBuffer(fileSize);
+    fileInfo.Read(&fileBuffer[0], fileSize);
+    result = DataWrite(&fileBuffer[0], fileSize);
+    fileBuffer.clear();
 
 		fileInfo.Close();
 	}

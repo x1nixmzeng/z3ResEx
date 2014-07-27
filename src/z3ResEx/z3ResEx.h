@@ -66,12 +66,12 @@ class z3ResEx
 
 	// Misc functions
 	std::string fsRename( const char *, const char * ) const;
-	void unpackStringEx( TMemoryStream &, unsigned char *&, const unsigned int ) const;
+	void unpackStringEx( TMemoryStream &, vector<unsigned char>&, const unsigned int ) const;
 	void fsCreatePath( std::string &strPath ) const;
 
 	// Extraction functions
-	bool extractItem2( FILEINDEX_ENTRY2 &, const string &, char * );
-	bool extractItem( FILEINDEX_ENTRY &, unsigned char, char *, char * );
+	bool extractItem2( FILEINDEX_ENTRY2 &, const string &, const char * );
+	bool extractItem( FILEINDEX_ENTRY &, unsigned char, const char *, const char * );
 
 	// Helper functions
 	bool z3Decrypt( TMemoryStream &, TMemoryStream &, unsigned char *, unsigned int );
